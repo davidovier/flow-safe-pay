@@ -102,18 +102,32 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex">
         {/* Sidebar - hidden on mobile, shown on desktop */}
         <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:pt-16 lg:bg-card/30 lg:border-r">
-          <nav className="flex-1 p-4 space-y-2">
-            {navItems.map((item) => (
+          <nav className="flex-1 p-4 space-y-2 flex flex-col">
+            <div className="space-y-2">
+              {navItems.map((item) => (
+                <Button
+                  key={item.path}
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 mr-2" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+            
+            {/* Logout button at bottom */}
+            <div className="mt-auto pt-4">
               <Button
-                key={item.path}
                 variant="ghost"
-                className="w-full justify-start"
-                onClick={() => navigate(item.path)}
+                className="w-full justify-start text-muted-foreground hover:text-destructive"
+                onClick={signOut}
               >
-                <item.icon className="h-4 w-4 mr-2" />
-                {item.label}
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
               </Button>
-            ))}
+            </div>
           </nav>
         </aside>
 

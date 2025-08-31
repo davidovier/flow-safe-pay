@@ -17,8 +17,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* FlowPay Primary Brand Colors */
-    --primary: 258 90% 66%; /* Electric Purple */
+    /* FlowPay Primary Brand Colors - Ocean Blue */
+    --primary: 210 100% 56%; /* Ocean Blue */
     --primary-foreground: 0 0% 98%;
 
     /* Success/Money Colors */
@@ -35,7 +35,7 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 258 90% 66%; /* Match primary */
+    --accent: 189 100% 56%; /* Teal accent */
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84.2% 60.2%;
@@ -43,7 +43,7 @@ All colors MUST be HSL.
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 258 90% 66%; /* Match primary */
+    --ring: 210 100% 56%; /* Match primary */
 
     --radius: 0.75rem;
 
@@ -75,7 +75,7 @@ All colors MUST be HSL.
     --popover-foreground: 210 40% 98%;
 
     /* FlowPay Primary Brand Colors - Dark Mode */
-    --primary: 258 90% 66%; /* Keep same electric purple */
+    --primary: 210 100% 56%; /* Ocean Blue */
     --primary-foreground: 222.2 84% 4.9%;
 
     /* Success/Money Colors - Dark Mode */
@@ -92,7 +92,7 @@ All colors MUST be HSL.
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 258 90% 66%; /* Match primary */
+    --accent: 189 100% 56%; /* Teal accent */
     --accent-foreground: 222.2 84% 4.9%;
 
     --destructive: 0 62.8% 30.6%;
@@ -100,7 +100,7 @@ All colors MUST be HSL.
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 258 90% 66%; /* Match primary */
+    --ring: 210 100% 56%; /* Match primary */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

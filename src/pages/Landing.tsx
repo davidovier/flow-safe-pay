@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Shield, 
   Zap, 
@@ -16,12 +17,33 @@ import {
   DollarSign,
   ArrowRight,
   Play,
-  Quote
+  Quote,
+  X
 } from 'lucide-react';
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const { toast } = useToast();
+
+  // Smooth scroll function
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
+  // Show coming soon toast for demo
+  const handleDemoClick = () => {
+    toast({
+      title: "Coming Soon! 🎬",
+      description: "Our demo video is currently in production and will be available soon.",
+      duration: 4000,
+    });
+  };
 
   const features = [
     {
@@ -108,9 +130,24 @@ export default function Landing() {
               <span className="text-xl font-bold">FlowPay</span>
             </div>
             <div className="hidden md:flex items-center space-x-6">
-              <a href="#features" className="text-muted-foreground hover:text-foreground">Features</a>
-              <a href="#reviews" className="text-muted-foreground hover:text-foreground">Reviews</a>
-              <a href="#security" className="text-muted-foreground hover:text-foreground">Security</a>
+              <button 
+                onClick={() => scrollToSection('features')} 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Features
+              </button>
+              <button 
+                onClick={() => scrollToSection('reviews')} 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Reviews
+              </button>
+              <button 
+                onClick={() => scrollToSection('security')} 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Security
+              </button>
               <Button variant="outline" onClick={() => navigate('/auth')}>Sign In</Button>
               <Button onClick={() => navigate('/auth')}>Get Started</Button>
             </div>
@@ -145,7 +182,7 @@ export default function Landing() {
                 variant="outline" 
                 size="lg" 
                 className="text-lg"
-                onClick={() => setIsVideoOpen(true)}
+                onClick={handleDemoClick}
               >
                 <Play className="mr-2 h-5 w-5" />
                 Watch Demo
@@ -373,7 +410,7 @@ export default function Landing() {
               size="lg" 
               variant="outline" 
               className="text-lg border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-              onClick={() => setIsVideoOpen(true)}
+              onClick={handleDemoClick}
             >
               <Play className="mr-2 h-5 w-5" />
               Watch Demo
@@ -502,29 +539,6 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* Video Modal Placeholder */}
-      {isVideoOpen && (
-        <div 
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          onClick={() => setIsVideoOpen(false)}
-        >
-          <div className="bg-background rounded-lg p-6 max-w-2xl w-full">
-            <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4">
-              <div className="text-center">
-                <Play className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Demo video coming soon!</p>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => setIsVideoOpen(false)}
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

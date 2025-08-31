@@ -12,6 +12,12 @@ import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/brand/Projects";
 import NewProject from "./pages/brand/NewProject";
 import Deals from "./pages/Deals";
+import Deliverables from "./pages/Deliverables";
+import Payouts from "./pages/Payouts";
+import Payments from "./pages/Payments";
+import AdminUsers from "./pages/admin/Users";
+import AdminDeals from "./pages/admin/Deals";
+import AdminTransactions from "./pages/admin/Transactions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -59,6 +65,48 @@ const App = () => (
               <ProtectedRoute allowedRoles={['CREATOR', 'BRAND']}>
                 <AppLayout>
                   <Deals />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/deliverables" element={
+              <ProtectedRoute allowedRoles={['CREATOR']}>
+                <AppLayout>
+                  <Deliverables />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/payouts" element={
+              <ProtectedRoute allowedRoles={['CREATOR']}>
+                <AppLayout>
+                  <Payouts />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/payments" element={
+              <ProtectedRoute allowedRoles={['BRAND']}>
+                <AppLayout>
+                  <Payments />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AppLayout>
+                  <AdminUsers />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/deals" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AppLayout>
+                  <AdminDeals />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/transactions" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AppLayout>
+                  <AdminTransactions />
                 </AppLayout>
               </ProtectedRoute>
             } />
