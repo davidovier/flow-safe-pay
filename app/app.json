@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "FlowPay",
+    "slug": "flowpay-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0066FF"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.flowpay.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "FlowPay needs access to your camera to upload deliverable content.",
+        "NSPhotoLibraryUsageDescription": "FlowPay needs access to your photo library to upload deliverable content.",
+        "NSMicrophoneUsageDescription": "FlowPay needs access to your microphone to record video deliverables."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0066FF"
+      },
+      "package": "com.flowpay.app",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "flowpay",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow FlowPay to access your camera to capture deliverable content."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FlowPay needs access to your photo library to upload deliverable content.",
+          "cameraPermission": "FlowPay needs access to your camera to capture deliverable content."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "flowpay-mobile-app"
+      }
+    }
+  }
+}

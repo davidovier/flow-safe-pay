@@ -1,0 +1,243 @@
+// FlowPay Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CREATOR
+  BRAND
+  ADMIN
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRED
+}
+
+enum DealState {
+  DRAFT
+  FUNDED
+  RELEASED
+  DISPUTED
+  REFUNDED
+}
+
+enum MilestoneState {
+  PENDING
+  SUBMITTED
+  APPROVED
+  RELEASED
+  DISPUTED
+}
+
+enum DisputeState {
+  OPEN
+  PARTIAL
+  RESOLVED
+  REJECTED
+}
+
+enum PaymentProvider {
+  STRIPE
+  MANGOPAY
+  CRYPTO
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  hashedPassword  String?
+  role            UserRole
+  country         String?
+  stripeAccountId String?
+  kycStatus       KycStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relationships
+  brandProjects   Project[]    @relation("BrandProjects")
+  creatorDeals    Deal[]       @relation("CreatorDeals")
+  raisedDisputes  Dispute[]    @relation("DisputeRaiser")
+  events          Event[]      @relation("UserEvents")
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  brandId     String
+  title       String
+  description String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  brand       User     @relation("BrandProjects", fields: [brandId], references: [id], onDelete: Cascade)
+  deals       Deal[]
+
+  @@map("projects")
+}
+
+model Deal {
+  id           String    @id @default(cuid())
+  projectId    String
+  creatorId    String
+  currency     String    @default("usd")
+  amountTotal  Int       // Amount in cents
+  escrowId     String?   // Provider-specific escrow ID
+  state        DealState @default(DRAFT)
+  acceptedAt   DateTime?
+  fundedAt     DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator      User         @relation("CreatorDeals", fields: [creatorId], references: [id])
+  milestones   Milestone[]
+  contract     Contract?
+  disputes     Dispute[]
+  payouts      Payout[]
+  events       Event[]
+
+  @@map("deals")
+}
+
+model Milestone {
+  id          String         @id @default(cuid())
+  dealId      String
+  title       String
+  description String?
+  amount      Int            // Amount in cents
+  dueAt       DateTime?
+  state       MilestoneState @default(PENDING)
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  releasedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relationships
+  deal         Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  deliverables Deliverable[]
+  payouts      Payout[]
+
+  @@map("milestones")
+}
+
+model Deliverable {
+  id           String    @id @default(cuid())
+  milestoneId  String
+  url          String?   // Link to deliverable (social post, etc.)
+  fileUrl      String?   // S3 URL for uploaded files
+  fileHash     String?   // SHA-256 hash for integrity
+  fileName     String?
+  fileSize     Int?      // Size in bytes
+  submittedAt  DateTime  @default(now())
+  checks       Json?     // Validation results
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  milestone    Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@map("deliverables")
+}
+
+model Contract {
+  id                String    @id @default(cuid())
+  dealId            String    @unique
+  version           String    @default("1.0")
+  pdfUrl            String?
+  signatureBrand    String?   // Brand signature data
+  signatureCreator  String?   // Creator signature data
+  signedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relationships
+  deal              Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@map("contracts")
+}
+
+model Dispute {
+  id            String       @id @default(cuid())
+  dealId        String
+  raisedByUserId String
+  reason        String
+  state         DisputeState @default(OPEN)
+  resolution    String?
+  resolvedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relationships
+  deal          Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  raisedBy      User         @relation("DisputeRaiser", fields: [raisedByUserId], references: [id])
+
+  @@map("disputes")
+}
+
+model Payout {
+  id           String          @id @default(cuid())
+  dealId       String
+  milestoneId  String?
+  provider     PaymentProvider
+  providerRef  String          // Provider-specific transaction ID
+  amount       Int             // Amount in cents
+  currency     String          @default("usd")
+  status       PayoutStatus    @default(PENDING)
+  metadata     Json?           // Provider-specific data
+  processedAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // Relationships
+  deal         Deal            @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  milestone    Milestone?      @relation(fields: [milestoneId], references: [id])
+
+  @@map("payouts")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  type        String   // e.g., "deal.created", "milestone.approved"
+  payload     Json     // Event data
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  actor       User?    @relation("UserEvents", fields: [actorUserId], references: [id])
+
+  @@map("events")
+}
+
+// Indexes for performance
+@@index([User.email])
+@@index([User.stripeAccountId])
+@@index([Deal.state])
+@@index([Deal.creatorId])
+@@index([Deal.projectId])
+@@index([Milestone.state])
+@@index([Milestone.dueAt])
+@@index([Payout.status])
+@@index([Event.type])
+@@index([Event.createdAt])
