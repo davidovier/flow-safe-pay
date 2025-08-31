@@ -4,407 +4,322 @@ FlowPay is a mobile-first escrow platform where brands fund creator deals upfron
 
 ## 🏗️ Architecture
 
-### Monorepo Structure
+### Dual Architecture Setup
+FlowPay supports two deployment architectures:
+
+1. **🌟 Lovable Environment** - Web preview with Supabase backend
+2. **🚀 Production Setup** - React Native mobile + Node.js backend
+
 ```
-├── app/                 # React Native (Expo) mobile application
+├── src/                 # React web app (Lovable compatible)
+├── app-mobile/          # React Native (Expo) mobile app  
 ├── backend/             # Node.js + TypeScript + Fastify API server
-├── infra/              # Infrastructure as code (Docker, CI/CD)
-├── CLAUDE.md           # Development guidance for Claude Code
-└── README.md           # This file
+├── supabase/            # Supabase functions & database
+├── infra/               # Infrastructure as code
+└── README.md            # This file
 ```
 
-### Tech Stack
+## 🌟 Quick Start (Lovable Environment)
 
-**Backend:**
-- **Runtime:** Node.js + TypeScript
-- **Framework:** Fastify with OpenAPI documentation
-- **Database:** PostgreSQL with Prisma ORM
-- **Queue:** BullMQ (Redis)
-- **Payments:** Stripe Connect with Payments Abstraction Layer
-- **Storage:** S3-compatible (Cloudflare R2) with SHA-256 hashing
-- **Auth:** JWT with role-based access control
+The easiest way to get started is through the Lovable environment which provides:
+- **Instant Preview** - No local setup required
+- **Supabase Backend** - Fully managed database and edge functions
+- **Real Stripe Integration** - Test payments with live webhooks
+- **Web Interface** - Complete brand and creator workflows
 
-**Mobile App:**
-- **Framework:** React Native with Expo
-- **State Management:** Redux Toolkit
-- **Navigation:** Expo Router
-- **Storage:** Expo SecureStore for tokens
+### Demo Credentials
+```
+Brand: brand@example.com / password123
+Creator: creator@example.com / password123
+```
 
-**Infrastructure:**
-- **Development:** Docker compose
-- **CI/CD:** GitHub Actions
-- **Monitoring:** Structured logging with metrics
+### Current Features
+- ✅ User authentication with role-based access
+- ✅ Project creation and management
+- ✅ Deal creation with milestones
+- ✅ Stripe payment integration
+- ✅ Webhook handling for payment lifecycle
+- ✅ Real-time database updates
 
-## 🚀 Quick Start
+## 🚀 Production Setup (Node.js Backend)
+
+For production deployment with mobile app and advanced features:
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 14+
 - Redis 6+
-- Stripe account with test keys
+- Stripe account
 
 ### Backend Setup
-
-1. **Install dependencies:**
 ```bash
 cd backend
 npm install
-```
-
-2. **Environment setup:**
-```bash
 cp ../.env.example .env
-# Edit .env with your database and Stripe credentials
-```
+# Edit .env with your credentials
 
-3. **Database setup:**
-```bash
-npm run db:generate    # Generate Prisma client
-npm run db:migrate     # Run migrations
-npm run db:seed        # Seed with demo data
-```
-
-4. **Start development server:**
-```bash
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-The API will be available at `http://localhost:3001` with documentation at `http://localhost:3001/docs`.
-
 ### Mobile App Setup
-
-1. **Install dependencies:**
 ```bash
-cd app
+cd app-mobile
 npm install
-```
-
-2. **Start Expo development server:**
-```bash
 npm start
-```
-
-3. **Run on device/simulator:**
-```bash
 npm run ios     # iOS Simulator
 npm run android # Android Emulator
 ```
 
-### Environment Variables
+## 💳 Payment Flows
 
-Create `.env` file in the root directory (see `.env.example`):
+### Core User Journeys
 
-```bash
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/flowpay
+**Brand Flow:**
+1. Create project and deal with milestones
+2. Invite creator by email
+3. Creator accepts → escrow created
+4. Brand funds deal via Stripe
+5. Creator submits deliverables
+6. Brand approves → instant payout
 
-# Redis
-REDIS_URL=redis://localhost:6379
+**Creator Flow:**
+1. Receive deal invitation
+2. Review terms and accept
+3. Complete deliverables per milestone
+4. Upload files + submit links
+5. Auto-payment on approval (or timer expiry)
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+### Technical Flow
 
-# S3 Storage
-S3_ENDPOINT=https://s3.amazonaws.com
-S3_ACCESS_KEY=your_access_key
-S3_SECRET_KEY=your_secret_key
-S3_BUCKET=flowpay-files
-
-# JWT
-JWT_SECRET=your-super-secret-jwt-key
-
-# App URLs
-API_BASE_URL=http://localhost:3001
-APP_BASE_URL=http://localhost:3000
+```mermaid
+sequenceDiagram
+    Brand->>+FlowPay: Create Deal
+    FlowPay->>+Creator: Deal Invitation
+    Creator->>+FlowPay: Accept Deal
+    FlowPay->>+Stripe: Create Escrow
+    Brand->>+Stripe: Fund Escrow ($2,500)
+    Creator->>+FlowPay: Submit Deliverable
+    Brand->>+FlowPay: Approve Milestone
+    FlowPay->>+Stripe: Release to Creator
+    Stripe->>+Creator: Instant Payout ($1,500)
+    FlowPay->>+Both: Generate Invoice
 ```
 
-## 🏃‍♂️ Development Workflow
-
-### Available Scripts
-
-**Backend:**
-```bash
-npm run dev          # Start development server with hot reload
-npm run build        # Build for production
-npm run start        # Start production server
-npm run test         # Run tests
-npm run lint         # Lint code
-npm run typecheck    # TypeScript type checking
-npm run db:migrate   # Run database migrations
-npm run db:seed      # Seed database with demo data
-npm run db:studio    # Open Prisma Studio
-```
-
-**Mobile App:**
-```bash
-npm start           # Start Expo dev server
-npm run ios         # Run on iOS simulator
-npm run android     # Run on Android emulator
-npm run web         # Run in web browser
-npm run test        # Run tests
-npm run lint        # Lint code
-```
-
-**Root (both):**
-```bash
-npm run dev:all     # Start both backend and app
-npm run test:all    # Run all tests
-npm run lint:all    # Lint all code
-```
-
-### Demo Credentials
-```
-Brand User:   brand@example.com / password123
-Creator User: creator@example.com / password123  
-Admin User:   admin@flowpay.com / password123
-```
-
-## 💳 Stripe Setup
-
-### 1. Create Connected Accounts
-Set up Express accounts for brands and creators:
-```bash
-curl -X POST http://localhost:3001/stripe/connect/account \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"userType": "creator", "email": "creator@example.com", "country": "US"}'
-```
-
-### 2. Webhook Configuration
-Configure Stripe webhooks to point to `https://your-domain.com/webhooks/stripe` with these events:
-- `payment_intent.succeeded`
-- `payment_intent.payment_failed`
-- `transfer.created`
-- `transfer.updated`
-- `payout.created`
-- `payout.updated`
-- `account.updated`
-
-### 3. Local Webhook Testing
-Use ngrok for local development:
-```bash
-# Install ngrok and expose your local server
-ngrok http 3001
-
-# Use the ngrok URL for Stripe webhook endpoint
-# https://abc123.ngrok.io/webhooks/stripe
-```
-
-## 🔧 Core Features
-
-### Payment Flows
-
-**1. Deal Creation & Acceptance:**
-- Brand creates deal with milestones
-- Creator accepts terms
-- Escrow created via Stripe Connect
-
-**2. Funding:**
-- Brand funds deal via Stripe payment
-- Funds held in connected account (no custody)
-- Deal state updated to FUNDED
-
-**3. Deliverable Submission:**
-- Creator uploads files with SHA-256 hashing
-- Automatic validation checks run
-- Brand has 5-day SLA to approve
-
-**4. Auto-release:**
-- Funds auto-release if no response within SLA
-- Manual approval triggers instant payout
-- Invoice automatically generated
+## 🔧 Key Features
 
 ### Payments Abstraction Layer (PAL)
-
-The system uses a pluggable payment interface:
+Pluggable interface supporting multiple payment providers:
 
 ```typescript
 interface PaymentsProvider {
   createEscrow(dealId: string, currency: string): Promise<{ escrowId: string }>;
   fundEscrow(escrowId: string, amountCents: number, brandUserId: string): Promise<{ paymentRef: string }>;
-  releaseToCreator(escrowId: string, amountCents: number, creatorUserId: string, metadata?: any): Promise<{ payoutRef: string }>;
+  releaseToCreator(escrowId: string, amountCents: number, creatorUserId: string): Promise<{ payoutRef: string }>;
   refundToBrand(escrowId: string, amountCents?: number): Promise<{ refundRef: string }>;
-  getStatus(escrowId: string): Promise<{ state: 'unfunded'|'funded'|'released'|'refunded' }>;
+  getStatus(escrowId: string): Promise<{ state: EscrowState }>;
 }
 ```
 
 **Current Implementations:**
-- ✅ `StripeConnectProvider` - Production ready
-- 🚧 `CryptoProvider` - Scaffold for USDC payments
-- 🚧 `MangopayProvider` - Placeholder for European markets
+- ✅ **Stripe Connect** - Production ready (both architectures)
+- 🚧 **Crypto Provider** - USDC scaffold ready
+- 🚧 **MangoPay** - European markets placeholder
+
+### Database Schema
+Unified schema works across both Supabase and PostgreSQL:
+
+- **Users** - Creators, brands, admins with KYC status
+- **Projects** - Brand campaign containers
+- **Deals** - Escrow agreements with state machine
+- **Milestones** - Payment releases with approval timers
+- **Deliverables** - File uploads with SHA-256 hashing
+- **Events** - Complete audit trail
+- **Payouts** - Payment tracking across providers
 
 ## 🧪 Testing
 
-### Backend Tests
-```bash
-cd backend
-npm run test              # Run all tests
-npm run test:watch        # Watch mode
-npm run test:coverage     # With coverage report
+### Lovable Environment Testing
+1. Open project in Lovable
+2. Sign up as brand: `testbrand@example.com`
+3. Create project and deal
+4. Sign up as creator: `testcreator@example.com`
+5. Accept deal and submit deliverable
+6. Test approval flow
+
+### Stripe Test Cards
+```
+4242 4242 4242 4242  # Visa - Success
+4000 0000 0000 0002  # Generic decline
+4000 0000 0000 9995  # Insufficient funds
 ```
 
-### Integration Testing
-Test the full payment flow:
+### Webhook Testing (Local)
 ```bash
-# 1. Register users
-# 2. Create and accept deal
-# 3. Fund with Stripe test card (4242 4242 4242 4242)
-# 4. Submit deliverable
-# 5. Approve milestone
-# 6. Verify payout completed
-```
-
-### Webhook Testing
-Use Stripe CLI to forward webhook events:
-```bash
+# Install Stripe CLI
 stripe listen --forward-to localhost:3001/webhooks/stripe
+
+# For Supabase functions
+stripe listen --forward-to your-project.supabase.co/functions/v1/stripe-webhooks
 ```
 
-## 📱 Mobile App Features
+## 📱 Mobile Features (Production)
 
-### Authentication
-- Email/password login with JWT
-- Role-based UI (Creator vs Brand)
-- Secure token storage with Expo SecureStore
+### Creator Mobile App
+- Deal notifications and acceptance
+- Camera integration for deliverable capture
+- File upload with progress tracking
+- Payout history and status
+- Push notifications for deal updates
 
-### Creator Flow
-- View accepted deals
-- Submit deliverables (file + URL)
-- Track milestone progress
-- View payout history
-
-### Brand Flow  
-- Create deals with milestones
-- Fund via Stripe payment
-- Review and approve deliverables
-- Monitor deal performance
-
-### File Upload
-- Presigned S3 URLs for secure uploads
-- SHA-256 integrity verification
-- Support for images, videos, PDFs
-- File size limits configurable
+### Brand Mobile App
+- Project creation and management
+- Deal monitoring dashboard
+- Deliverable review interface
+- Payment and invoice management
+- Creator performance analytics
 
 ## 🔒 Security & Compliance
 
 ### Data Protection
-- PII encrypted at rest
-- JWT with short TTL
-- HTTPS everywhere
-- Private S3 buckets with presigned URLs
+- Supabase RLS (Row Level Security)
+- JWT authentication with refresh tokens
+- PII encryption at database level
+- Secure file uploads via presigned URLs
 
 ### Financial Compliance
-- Stripe handles KYC/KYB - no PAN storage
-- EU VAT reverse-charge logic for B2B
+- Stripe handles all KYC/AML requirements
+- EU VAT reverse-charge for B2B deals
 - 10-year invoice retention
-- Audit trail via Events table
+- Complete audit trail via Events table
+- GDPR-compliant data handling
 
-### Rate Limiting & Abuse Prevention
-- API rate limits: 100 requests/15 minutes
-- Idempotency keys for financial operations
-- Request ID tracking
+### Rate Limiting
+- Supabase: Built-in rate limiting
+- Node.js backend: 100 req/15min per user
 - Webhook signature verification
+- Idempotency keys for payments
 
-## 🌍 Production Deployment
+## 🌍 Deployment Options
 
-### Docker Deployment
+### Option 1: Lovable + Supabase (Recommended for MVP)
 ```bash
-# Backend
+# Already deployed! Just visit your Lovable preview URL
+# Database, functions, and CDN all managed by Supabase
+# Real-time updates and webhooks work out of the box
+```
+
+### Option 2: Full Production Stack
+```bash
+# Backend API
 cd backend
 docker build -t flowpay-backend .
 docker run -p 3001:3001 flowpay-backend
 
-# Database
-docker run -d --name flowpay-db \
-  -e POSTGRES_DB=flowpay \
-  -e POSTGRES_USER=flowpay \
-  -e POSTGRES_PASSWORD=secure_password \
-  -p 5432:5432 postgres:14
+# Mobile apps via EAS Build
+cd app-mobile
+eas build --platform all
+eas submit --platform ios
+eas submit --platform android
 ```
 
-### Environment Configuration
-Set these in production:
-- `NODE_ENV=production`
-- Strong `JWT_SECRET` (32+ characters)
-- Production Stripe keys
-- Secure database credentials
-- S3 bucket with proper IAM policies
+## 🛠️ Development Workflow
 
-### Monitoring
-- Health check endpoint: `GET /health`
-- Webhook success rates tracked
-- P95 latency metrics
-- Structured JSON logging
+### Lovable Development
+1. Make changes in Lovable interface
+2. Changes auto-deploy to preview
+3. Test with real Stripe integration
+4. Supabase functions handle webhooks automatically
+
+### Local Development
+```bash
+# Start all services
+npm run dev           # Web app
+npm run backend:dev   # API server  
+npm run mobile:dev    # Mobile app
+
+# Database operations
+npm run db:migrate    # Run migrations
+npm run db:seed       # Add demo data
+npm run db:reset      # Reset database
+```
 
 ## 🔮 Future Roadmap
 
 ### V2 Features (Next 6 months)
-- **Crypto Payouts:** USDC on Base/Polygon
-- **Advanced Rights:** C2PA content provenance
-- **AI Negotiation:** Automated deal terms
-- **Marketplace:** Creator discovery platform
+- **🪙 Crypto Payouts** - USDC on Base/Polygon via PAL interface
+- **🤖 AI Content Validation** - Automated deliverable checking
+- **📊 Analytics Dashboard** - Performance metrics and insights
+- **🌍 International Markets** - Multi-currency and localization
 
-### Crypto Integration Prep
-- `CryptoProvider` interface ready
-- KYC compliance hooks
-- Travel Rule provider integration planned
-- Multi-chain wallet support designed
-
-### Compliance Expansion
-- MangoPay for European markets
-- Additional KYC provider support
-- Enhanced GDPR tooling
-- SOC 2 Type II preparation
-
-## 🤝 Contributing
-
-### Development Process
-1. Create feature branch from `main`
-2. Run tests: `npm run test:all`
-3. Lint code: `npm run lint:all` 
-4. Create pull request
-5. All checks must pass before merge
-
-### Code Quality
-- 90%+ test coverage required
-- TypeScript strict mode
-- ESLint + Prettier formatting
-- Conventional commit messages
+### Crypto Integration (Ready to Build)
+```typescript
+// CryptoProvider already scaffolded
+class CryptoProvider implements PaymentsProvider {
+  // USDC escrow on Base network
+  async createEscrow(dealId: string): Promise<{ escrowId: string }> {
+    // TODO: Deploy smart contract escrow
+  }
+  
+  // Automatic release with travel rule compliance
+  async releaseToCreator(escrowId: string, amount: number): Promise<{ payoutRef: string }> {
+    // TODO: Execute on-chain transfer with KYC checks
+  }
+}
+```
 
 ## 📞 Support
 
-### Documentation
+### Environment-Specific Help
+
+**Lovable Environment:**
+- Use Lovable's built-in debugging tools
+- Database visible in Supabase dashboard
+- Real-time logs in browser dev tools
+
+**Production Environment:**
 - API docs: `http://localhost:3001/docs`
-- Architecture: `CLAUDE.md`
-- Stripe integration: [Stripe Connect docs](https://stripe.com/docs/connect)
+- Health check: `GET /health`
+- Mobile debugging: React Native Flipper
 
 ### Troubleshooting
 
-**Database Connection Issues:**
-```bash
-# Check if PostgreSQL is running
-pg_isready -h localhost -p 5432
+**Lovable Preview Issues:**
+- Check browser console for errors
+- Verify Supabase connection in Network tab
+- Test auth flow with incognito window
 
-# Reset database
-npm run db:reset
-```
+**Stripe Integration:**
+- Webhook events visible in Stripe dashboard
+- Test webhooks with Stripe CLI
+- Check Supabase function logs
 
-**Stripe Webhooks Not Received:**
-```bash
-# Check webhook endpoint is accessible
-curl -X POST http://localhost:3001/webhooks/stripe \
-  -H "stripe-signature: test" \
-  -d "{}"
-
-# Verify ngrok tunnel for local development
-```
-
-**Mobile App Won't Connect:**
-- Ensure backend is running on correct port
-- Check API_BASE_URL in app config
-- Verify network permissions in simulator
+**Database Issues:**
+- Lovable: Check Supabase dashboard
+- Production: Use `npm run db:studio`
 
 ---
+
+## 🎯 MVP Status
+
+### ✅ Completed (Both Architectures)
+- User authentication and role management
+- Project and deal creation workflows
+- Stripe Connect escrow integration
+- Real-time webhook processing
+- Responsive web interface
+- Database migrations and seeding
+
+### 🚧 In Progress (Production Only)
+- React Native mobile apps
+- Advanced file upload with SHA-256
+- Auto-approval timers with BullMQ
+- PDF invoice generation
+- Comprehensive test coverage
+
+### 📋 Ready for Testing
+Both architectures support the complete deal flow from creation to payout. The Lovable environment provides immediate access for testing, while the production setup offers the full mobile experience and advanced features.
 
 **License:** MIT  
 **Maintainer:** FlowPay Engineering Team  

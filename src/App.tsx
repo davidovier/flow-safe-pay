@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/brand/Projects";
 import NewProject from "./pages/brand/NewProject";
+import Deals from "./pages/Deals";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +50,13 @@ const App = () => (
               <ProtectedRoute allowedRoles={['BRAND']}>
                 <AppLayout>
                   <NewProject />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/deals" element={
+              <ProtectedRoute allowedRoles={['CREATOR', 'BRAND']}>
+                <AppLayout>
+                  <Deals />
                 </AppLayout>
               </ProtectedRoute>
             } />
