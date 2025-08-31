@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { Loader2, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup';
@@ -21,6 +22,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp } = useAuth();
+  const { t } = useTranslation();
 
   // Password strength validation
   const passwordRequirements = {
@@ -64,12 +66,12 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold">
-          {mode === 'signin' ? 'Welcome Back' : 'Join FlowPay'}
+          {mode === 'signin' ? t('welcomeBack') : t('joinFlowPay')}
         </CardTitle>
         <CardDescription>
           {mode === 'signin' 
-            ? 'Sign in to your FlowPay account' 
-            : 'Create your FlowPay account to get started'
+            ? t('signInToAccount')
+            : t('createAccount')
           }
         </CardDescription>
       </CardHeader>
@@ -79,7 +81,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">{t('firstName')}</Label>
                   <Input
                     id="firstName"
                     value={firstName}
@@ -88,7 +90,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">{t('lastName')}</Label>
                   <Input
                     id="lastName"
                     value={lastName}
@@ -98,21 +100,21 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">I am a...</Label>
+                <Label htmlFor="role">{t('iAmA')}</Label>
                 <Select value={role} onValueChange={(value: UserRole) => setRole(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CREATOR">Creator</SelectItem>
-                    <SelectItem value="BRAND">Brand</SelectItem>
+                    <SelectItem value="CREATOR">{t('creator')}</SelectItem>
+                    <SelectItem value="BRAND">{t('brand')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('email')}</Label>
             <Input
               id="email"
               type="email"
@@ -122,7 +124,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('password')}</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -170,19 +172,19 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
                 <div className="space-y-1 text-xs">
                   <div className={`flex items-center gap-2 ${passwordRequirements.length ? 'text-success' : 'text-muted-foreground'}`}>
                     {passwordRequirements.length ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                    At least 8 characters
+                    {t('passwordReq8Chars')}
                   </div>
                   <div className={`flex items-center gap-2 ${passwordRequirements.uppercase ? 'text-success' : 'text-muted-foreground'}`}>
                     {passwordRequirements.uppercase ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                    One uppercase letter
+                    {t('passwordReqUppercase')}
                   </div>
                   <div className={`flex items-center gap-2 ${passwordRequirements.number ? 'text-success' : 'text-muted-foreground'}`}>
                     {passwordRequirements.number ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                    One number
+                    {t('passwordReqNumber')}
                   </div>
                   <div className={`flex items-center gap-2 ${passwordRequirements.special ? 'text-success' : 'text-muted-foreground'}`}>
                     {passwordRequirements.special ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                    One special character
+                    {t('passwordReqSpecial')}
                   </div>
                 </div>
               </div>
@@ -192,11 +194,11 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
         <CardFooter className="flex flex-col space-y-4">
           <Button type="submit" className="w-full" disabled={loading || !canSubmit}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {mode === 'signin' ? t('signIn') : t('createAccount')}
           </Button>
           {mode === 'signup' && !canSubmit && (firstName || lastName || email || password) && (
             <p className="text-xs text-muted-foreground text-center">
-              Please complete all fields with valid information to continue
+              {t('completeAllFields')}
             </p>
           )}
           <Button
@@ -206,8 +208,8 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             className="w-full"
           >
             {mode === 'signin' 
-              ? "Don't have an account? Sign up" 
-              : 'Already have an account? Sign in'
+              ? t('noAccountSignUp')
+              : t('hasAccountSignIn')
             }
           </Button>
         </CardFooter>

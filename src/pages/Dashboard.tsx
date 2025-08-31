@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { UsageDashboard } from '@/components/subscription/UsageDashboard';
@@ -26,6 +27,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { userProfile } = useAuth();
+  const { t } = useTranslation();
   const { 
     canCreateDeal, 
     getRemainingLimits, 
@@ -97,15 +99,15 @@ export default function Dashboard() {
   };
 
   const getWelcomeMessage = () => {
-    if (!userProfile) return 'Welcome to FlowPay';
+    if (!userProfile) return t('welcomeToFlowPay');
     
-    const name = userProfile.first_name || 'there';
+    const name = userProfile.first_name || t('there');
     if (userProfile.role === 'CREATOR') {
-      return `Welcome back, ${name}! Ready to deliver amazing content?`;
+      return t('welcomeBackCreator', { name });
     } else if (userProfile.role === 'BRAND') {
-      return `Welcome back, ${name}! Let's create some great partnerships.`;
+      return t('welcomeBackBrand', { name });
     } else {
-      return `Welcome back, ${name}! Here's your admin overview.`;
+      return t('welcomeBackAdmin', { name });
     }
   };
 
@@ -131,18 +133,18 @@ export default function Dashboard() {
       const canCreate = canCreateDeal();
       return [
         { 
-          label: canCreate.allowed ? 'New Project' : 'New Project (Upgrade Required)', 
+          label: canCreate.allowed ? t('newProject') : t('newProjectUpgradeRequired'), 
           action: handleCreateProject, 
           icon: Plus,
           disabled: !canCreate.allowed,
           tooltip: !canCreate.allowed ? canCreate.reason : undefined
         },
-        { label: 'Browse Creators', action: () => navigate('/creators'), icon: TrendingUp },
+        { label: t('browseCreators'), action: () => navigate('/creators'), icon: TrendingUp },
       ];
     } else if (userProfile?.role === 'CREATOR') {
       return [
-        { label: 'Submit Deliverable', action: () => navigate('/deliverables'), icon: Plus },
-        { label: 'View Payouts', action: () => navigate('/payouts'), icon: DollarSign },
+        { label: t('submitDeliverable'), action: () => navigate('/deliverables'), icon: Plus },
+        { label: t('viewPayouts'), action: () => navigate('/payouts'), icon: DollarSign },
       ];
     }
     return [];
@@ -211,33 +213,33 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Deals</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('totalDeals')}</CardTitle>
             <Handshake className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalDeals}</div>
             <p className="text-xs text-muted-foreground">
-              All-time partnerships
+              {t('allTimePartnerships')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('activeDeals')}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeDeals}</div>
             <p className="text-xs text-muted-foreground">
-              Currently funded
+              {t('currentlyFunded')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('totalValue')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -245,20 +247,20 @@ export default function Dashboard() {
               ${(stats.totalAmount / 100).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              Across all deals
+              {t('acrossAllDeals')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('completed')}</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.completedDeals}</div>
             <p className="text-xs text-muted-foreground">
-              Successfully released
+              {t('successfullyReleased')}
             </p>
           </CardContent>
         </Card>
@@ -267,16 +269,16 @@ export default function Dashboard() {
       {/* Recent Deals */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Deals</CardTitle>
+          <CardTitle>{t('recentDeals')}</CardTitle>
           <CardDescription>
-            Your latest partnerships and collaborations
+            {t('latestPartnerships')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {recentDeals.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Handshake className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No deals yet. Start your first partnership!</p>
+              <p>{t('noDealsYet')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -286,8 +288,8 @@ export default function Dashboard() {
                     <h4 className="font-medium">{deal.projects.title}</h4>
                     <p className="text-sm text-muted-foreground">
                       {userProfile?.role === 'BRAND' 
-                        ? `Creator: ${deal.users?.first_name} ${deal.users?.last_name}`
-                        : `Brand Project`
+                        ? t('creatorName', { name: `${deal.users?.first_name} ${deal.users?.last_name}` })
+                        : t('brandProject')
                       }
                     </p>
                   </div>

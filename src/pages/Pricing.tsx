@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -21,6 +22,7 @@ import { SUBSCRIPTION_PLANS, PlanType } from '@/types/subscription';
 export default function Pricing() {
   const [isYearly, setIsYearly] = useState(false);
   const { userProfile } = useAuth();
+  const { t } = useTranslation();
   const { subscription, getCurrentPlan, upgradeToUser, loading } = useSubscription();
   const navigate = useNavigate();
 
@@ -57,11 +59,11 @@ export default function Pricing() {
                 onClick={() => navigate(userProfile ? '/dashboard' : '/')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                {userProfile ? 'Dashboard' : 'Home'}
+                {userProfile ? t('dashboard') : t('home')}
               </Button>
             </div>
             {!userProfile && (
-              <Button onClick={() => navigate('/auth')}>Sign In</Button>
+              <Button onClick={() => navigate('/auth')}>{t('signIn')}</Button>
             )}
           </div>
         </div>
@@ -71,16 +73,16 @@ export default function Pricing() {
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Choose Your Plan
+            {t('chooseYourPlan')}
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Start free, then choose a plan that scales with your business
+            {t('startFreeScale')}
           </p>
 
           {/* Billing Toggle */}
           <div className="flex items-center justify-center space-x-4 mb-8">
             <Label htmlFor="billing-toggle" className={!isYearly ? 'font-semibold' : 'text-muted-foreground'}>
-              Monthly
+              {t('monthly')}
             </Label>
             <Switch
               id="billing-toggle"
@@ -88,10 +90,10 @@ export default function Pricing() {
               onCheckedChange={setIsYearly}
             />
             <Label htmlFor="billing-toggle" className={isYearly ? 'font-semibold' : 'text-muted-foreground'}>
-              Yearly
+              {t('yearly')}
             </Label>
             <Badge variant="secondary" className="ml-2">
-              Save 17%
+              {t('save17Percent')}
             </Badge>
           </div>
         </div>
@@ -100,7 +102,7 @@ export default function Pricing() {
         {currentPlan && (
           <div className="text-center mb-8">
             <Badge variant="secondary" className="text-sm">
-              Currently on {currentPlan.name} plan
+              {t('currentlyOnPlan', { plan: currentPlan.name })}
             </Badge>
           </div>
         )}
@@ -128,7 +130,7 @@ export default function Pricing() {
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-primary text-primary-foreground px-4 py-1">
                       <Star className="h-3 w-3 mr-1" />
-                      Most Popular
+                      {t('mostPopular')}
                     </Badge>
                   </div>
                 )}
@@ -136,7 +138,7 @@ export default function Pricing() {
                 {isCurrentPlan && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge variant="success" className="px-4 py-1">
-                      Current Plan
+                      {t('currentPlan')}
                     </Badge>
                   </div>
                 )}
@@ -164,21 +166,21 @@ export default function Pricing() {
                   {/* Key Limits */}
                   <div className="space-y-2 pb-4 border-b">
                     <div className="flex justify-between text-sm">
-                      <span>Deals per month</span>
+                      <span>{t('dealsPerMonth')}</span>
                       <span className="font-semibold">
-                        {plan.limits.dealsPerMonth === -1 ? 'Unlimited' : plan.limits.dealsPerMonth}
+                        {plan.limits.dealsPerMonth === -1 ? t('unlimited') : plan.limits.dealsPerMonth}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Transaction volume</span>
+                      <span>{t('transactionVolume')}</span>
                       <span className="font-semibold">
                         {plan.limits.transactionVolume === -1 
-                          ? 'Unlimited' 
+                          ? t('unlimited') 
                           : `$${plan.limits.transactionVolume.toLocaleString()}/mo`}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Platform fee</span>
+                      <span>{t('platformFee')}</span>
                       <span className="font-semibold">
                         {plan.id === 'free' ? '3.5%' : 
                          plan.id === 'starter' ? '2.5%' :
@@ -206,12 +208,12 @@ export default function Pricing() {
                     onClick={() => handlePlanSelect(plan.id)}
                   >
                     {isCurrentPlan 
-                      ? 'Current Plan' 
+                      ? t('currentPlan') 
                       : subscription && subscription.planId !== 'free' && plan.id === 'free'
-                      ? 'Downgrade'
+                      ? t('downgrade')
                       : plan.id === 'free' 
-                      ? 'Get Started Free' 
-                      : 'Upgrade Now'
+                      ? t('getStartedFree') 
+                      : t('upgradeNow')
                     }
                   </Button>
                 </CardFooter>
@@ -222,30 +224,30 @@ export default function Pricing() {
 
         {/* FAQ Section */}
         <div className="mt-20">
-          <h2 className="text-3xl font-bold text-center mb-12">Pricing FAQ</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">{t('pricingFAQ')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <div>
-              <h3 className="font-semibold mb-2">Can I change plans anytime?</h3>
+              <h3 className="font-semibold mb-2">{t('faqChangePlans')}</h3>
               <p className="text-muted-foreground text-sm">
-                Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately and billing is prorated.
+                {t('faqChangePlansAnswer')}
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">What happens if I exceed my limits?</h3>
+              <h3 className="font-semibold mb-2">{t('faqExceedLimits')}</h3>
               <p className="text-muted-foreground text-sm">
-                You'll receive notifications as you approach your limits. If exceeded, you'll be prompted to upgrade or wait until the next billing cycle.
+                {t('faqExceedLimitsAnswer')}
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Is there a free trial?</h3>
+              <h3 className="font-semibold mb-2">{t('faqFreeTrial')}</h3>
               <p className="text-muted-foreground text-sm">
-                All paid plans come with a 14-day free trial. No credit card required for the free plan.
+                {t('faqFreeTrialAnswer')}
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">How are platform fees calculated?</h3>
+              <h3 className="font-semibold mb-2">{t('faqPlatformFees')}</h3>
               <p className="text-muted-foreground text-sm">
-                Platform fees are charged only on successful transactions. Higher plans get lower fees, saving you money as you grow.
+                {t('faqPlatformFeesAnswer')}
               </p>
             </div>
           </div>
@@ -253,14 +255,14 @@ export default function Pricing() {
 
         {/* Trust Indicators */}
         <div className="mt-16 text-center">
-          <p className="text-muted-foreground mb-4">Trusted by thousands of creators and brands</p>
+          <p className="text-muted-foreground mb-4">{t('trustedByThousands')}</p>
           <div className="flex justify-center items-center gap-6 opacity-60">
             <Shield className="h-6 w-6" />
-            <span className="text-sm font-medium">SOC 2 Compliant</span>
+            <span className="text-sm font-medium">{t('soc2Compliant')}</span>
             <span className="text-muted-foreground">•</span>
-            <span className="text-sm font-medium">PCI DSS Level 1</span>
+            <span className="text-sm font-medium">{t('pciDssLevel1')}</span>
             <span className="text-muted-foreground">•</span>
-            <span className="text-sm font-medium">99.9% Uptime</span>
+            <span className="text-sm font-medium">{t('uptimeGuarantee')}</span>
           </div>
         </div>
       </div>

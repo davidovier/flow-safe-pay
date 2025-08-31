@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { 
   Shield, 
   Zap, 
@@ -24,6 +26,7 @@ import {
 export default function Landing() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Smooth scroll function
   const scrollToSection = (sectionId: string) => {
@@ -48,31 +51,31 @@ export default function Landing() {
   const features = [
     {
       icon: Shield,
-      title: "Secure Escrow",
-      description: "Your funds are protected with bank-grade security until deliverables are approved."
+      titleKey: "secureEscrow",
+      descriptionKey: "secureEscrowDesc"
     },
     {
       icon: Zap,
-      title: "Instant Payouts",
-      description: "Creators get paid immediately upon approval - no more waiting 30 days for payment."
+      titleKey: "instantPayouts", 
+      descriptionKey: "instantPayoutsDesc"
     },
     {
       icon: CreditCard,
-      title: "Stripe Protected",
-      description: "All payments processed through Stripe with buyer and seller protection."
+      titleKey: "stripeProtected",
+      descriptionKey: "stripeProtectedDesc"
     },
     {
       icon: Clock,
-      title: "Auto-Release",
-      description: "Payments automatically release if no response within the agreed timeframe."
+      titleKey: "autoRelease",
+      descriptionKey: "autoReleaseDesc"
     }
   ];
 
   const stats = [
-    { value: "$2.4M+", label: "Paid to Creators" },
-    { value: "15,000+", label: "Successful Deals" },
-    { value: "99.8%", label: "Payment Success Rate" },
-    { value: "< 2min", label: "Average Payout Time" }
+    { value: "$2.4M+", labelKey: "paidToCreators" },
+    { value: "15,000+", labelKey: "successfulDeals" },
+    { value: "99.8%", labelKey: "paymentSuccessRate" },
+    { value: "< 2min", labelKey: "averagePayoutTime" }
   ];
 
   const reviews = [
@@ -134,31 +137,33 @@ export default function Landing() {
                 onClick={() => scrollToSection('features')} 
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Features
+                {t('features')}
               </button>
               <button 
                 onClick={() => scrollToSection('reviews')} 
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Reviews
+                {t('reviews')}
               </button>
               <button 
                 onClick={() => scrollToSection('security')} 
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Security
+                {t('security')}
               </button>
               <button 
                 onClick={() => navigate('/pricing')} 
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Pricing
+                {t('pricing')}
               </button>
-              <Button variant="outline" onClick={() => navigate('/auth')}>Sign In</Button>
-              <Button onClick={() => navigate('/auth')}>Get Started</Button>
+              <LanguageSwitcher variant="minimal" size="sm" />
+              <Button variant="outline" onClick={() => navigate('/auth')}>{t('signIn')}</Button>
+              <Button onClick={() => navigate('/auth')}>{t('getStarted')}</Button>
             </div>
-            <div className="md:hidden">
-              <Button onClick={() => navigate('/auth')}>Sign In</Button>
+            <div className="md:hidden flex items-center space-x-2">
+              <LanguageSwitcher variant="minimal" size="sm" />
+              <Button onClick={() => navigate('/auth')}>{t('signIn')}</Button>
             </div>
           </div>
         </div>
@@ -169,19 +174,18 @@ export default function Landing() {
         <div className="container mx-auto text-center">
           <div className="max-w-4xl mx-auto">
             <Badge variant="secondary" className="mb-4">
-              🚀 Trusted by 15,000+ creators and brands
+              {t('trustedBy')}
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-              Get Paid Instantly for Your 
-              <span className="text-primary"> Creator Work</span>
+              {t('heroTitle')}
+              <span className="text-primary"> {t('heroTitleHighlight')}</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Secure escrow platform that protects both creators and brands. 
-              Funds release automatically when work is approved - no more payment delays.
+              {t('heroDescription')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <Button size="lg" className="text-lg px-8" onClick={() => navigate('/auth')}>
-                Start Creating Deals
+                {t('startCreatingDeals')}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button 
@@ -191,7 +195,7 @@ export default function Landing() {
                 onClick={handleDemoClick}
               >
                 <Play className="mr-2 h-5 w-5" />
-                Watch Demo
+                {t('watchDemo')}
               </Button>
             </div>
           </div>
@@ -201,7 +205,7 @@ export default function Landing() {
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="text-3xl font-bold text-primary mb-1">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="text-sm text-muted-foreground">{t(stat.labelKey)}</div>
               </div>
             ))}
           </div>
@@ -225,10 +229,10 @@ export default function Landing() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Why Creators & Brands Choose FlowPay
+              {t('featuresTitle')}
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Built specifically for the creator economy with features that protect everyone involved
+              {t('featuresDescription')}
             </p>
           </div>
           
@@ -239,8 +243,8 @@ export default function Landing() {
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                     <feature.icon className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  <h3 className="font-semibold mb-2">{t(feature.titleKey)}</h3>
+                  <p className="text-sm text-muted-foreground">{t(feature.descriptionKey)}</p>
                 </CardContent>
               </Card>
             ))}
@@ -252,8 +256,8 @@ export default function Landing() {
       <section className="py-20 px-4 bg-muted/20">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How FlowPay Works</h2>
-            <p className="text-xl text-muted-foreground">Simple, secure, and transparent</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('howItWorksTitle')}</h2>
+            <p className="text-xl text-muted-foreground">{t('howItWorksDescription')}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -261,22 +265,22 @@ export default function Landing() {
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground font-bold text-xl">
                 1
               </div>
-              <h3 className="font-semibold mb-2">Create & Accept Deal</h3>
-              <p className="text-muted-foreground">Brand creates deal with milestones. Creator reviews and accepts terms.</p>
+              <h3 className="font-semibold mb-2">{t('step1Title')}</h3>
+              <p className="text-muted-foreground">{t('step1Description')}</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground font-bold text-xl">
                 2
               </div>
-              <h3 className="font-semibold mb-2">Secure Funding</h3>
-              <p className="text-muted-foreground">Brand funds the escrow. Money is held safely until work is completed.</p>
+              <h3 className="font-semibold mb-2">{t('step2Title')}</h3>
+              <p className="text-muted-foreground">{t('step2Description')}</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground font-bold text-xl">
                 3
               </div>
-              <h3 className="font-semibold mb-2">Instant Payment</h3>
-              <p className="text-muted-foreground">Creator delivers work. Upon approval, payment releases instantly.</p>
+              <h3 className="font-semibold mb-2">{t('step3Title')}</h3>
+              <p className="text-muted-foreground">{t('step3Description')}</p>
             </div>
           </div>
         </div>
@@ -286,12 +290,12 @@ export default function Landing() {
       <section id="reviews" className="py-20 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Users Say</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('reviewsTitle')}</h2>
             <div className="flex items-center justify-center gap-1 mb-4">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
               ))}
-              <span className="ml-2 text-lg font-semibold">4.9/5 from 2,500+ reviews</span>
+              <span className="ml-2 text-lg font-semibold">{t('reviewsRating')}</span>
             </div>
           </div>
           
