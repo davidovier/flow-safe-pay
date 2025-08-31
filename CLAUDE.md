@@ -8,10 +8,19 @@ FlowPay is a mobile-first escrow platform where brands fund creator deals upfron
 
 ## Architecture
 
-### Monorepo Structure
-- `/app` - React Native (Expo) mobile application
-- `/backend` - Node.js + TypeScript + Fastify API server
-- `/infra` - Infrastructure as code (Terraform/Helm stubs)
+### Dual Architecture Setup
+FlowPay supports both Lovable development and production deployment:
+
+**Lovable Environment:**
+- `/src/` - React web app with Supabase backend
+- Landing page at `/` with trust-building elements
+- Dashboard at `/dashboard` for authenticated users
+- Real-time Supabase integration
+
+**Production Environment:**
+- `/app-mobile/` - React Native (Expo) mobile application
+- `/backend/` - Node.js + TypeScript + Fastify API server
+- `/infra/` - Infrastructure as code
 
 ### Core Components
 

@@ -27,7 +27,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (!userProfile) return [];
 
     const baseItems = [
-      { icon: Home, label: 'Dashboard', path: '/' },
+      { icon: Home, label: 'Dashboard', path: '/dashboard' },
     ];
 
     if (userProfile.role === 'BRAND') {

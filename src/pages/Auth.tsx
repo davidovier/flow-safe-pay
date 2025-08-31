@@ -10,7 +10,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !loading) {
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 
