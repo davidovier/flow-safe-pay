@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Clock, DollarSign, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Clock, Wallet, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { CreateDealForm } from '@/components/deals/CreateDealForm';
 
@@ -153,7 +153,7 @@ export default function Deals() {
       {deals.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No deals yet</h3>
             <p className="text-gray-600 mb-4">
               {userProfile?.role === 'BRAND' 

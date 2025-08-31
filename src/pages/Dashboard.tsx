@@ -9,12 +9,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { UsageDashboard } from '@/components/subscription/UsageDashboard';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { 
-  DollarSign, 
   Handshake, 
   Clock, 
   CheckCircle,
   Plus,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -144,7 +144,7 @@ export default function Dashboard() {
     } else if (userProfile?.role === 'CREATOR') {
       return [
         { label: t('submitDeliverable'), action: () => navigate('/deliverables'), icon: Plus },
-        { label: t('viewPayouts'), action: () => navigate('/payouts'), icon: DollarSign },
+        { label: t('viewPayouts'), action: () => navigate('/payouts'), icon: Wallet },
       ];
     }
     return [];
@@ -240,7 +240,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('totalValue')}</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Globe, Check } from 'lucide-react';
+import { Globe } from 'lucide-react';
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -47,15 +47,10 @@ export function LanguageSwitcher({ variant = 'default', size = 'md' }: LanguageS
             <DropdownMenuItem
               key={language.code}
               onClick={() => handleLanguageChange(language.code)}
-              className="flex items-center justify-between cursor-pointer"
+              className="flex items-center gap-2 cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{language.flag}</span>
-                <span className="font-medium">{language.name}</span>
-              </div>
-              {currentLanguage.code === language.code && (
-                <Check className="h-4 w-4 text-primary" />
-              )}
+              <span className="text-lg">{language.flag}</span>
+              <span className="font-medium">{language.name}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -81,15 +76,10 @@ export function LanguageSwitcher({ variant = 'default', size = 'md' }: LanguageS
           <DropdownMenuItem
             key={language.code}
             onClick={() => handleLanguageChange(language.code)}
-            className="flex items-center justify-between cursor-pointer"
+            className="flex items-center gap-2 cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{language.flag}</span>
-              <span className="font-medium">{language.name}</span>
-            </div>
-            {currentLanguage.code === language.code && (
-              <Check className="h-4 w-4 text-primary" />
-            )}
+            <span className="text-lg">{language.flag}</span>
+            <span className="font-medium">{language.name}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

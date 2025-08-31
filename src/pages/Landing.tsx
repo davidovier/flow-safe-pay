@@ -16,7 +16,7 @@ import {
   CheckCircle, 
   TrendingUp,
   Clock,
-  DollarSign,
+  Wallet,
   ArrowRight,
   Play,
   Quote,
@@ -128,7 +128,7 @@ export default function Landing() {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-primary-foreground" />
+                <Wallet className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold">FlowPay</span>
             </div>
@@ -485,7 +485,7 @@ export default function Landing() {
             <div>
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-primary-foreground" />
+                  <Wallet className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <span className="text-xl font-bold">FlowPay</span>
               </div>

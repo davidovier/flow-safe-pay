@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { DollarSign, Clock, CheckCircle, AlertCircle, CreditCard, Landmark, Plus, Download, Eye } from 'lucide-react';
+import { Wallet, Clock, CheckCircle, AlertCircle, CreditCard, Landmark, Plus, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Payout {
@@ -111,7 +111,7 @@ export default function Payouts() {
       case 'processing': return <AlertCircle className="h-4 w-4" />;
       case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'failed': return <AlertCircle className="h-4 w-4" />;
-      default: return <DollarSign className="h-4 w-4" />;
+      default: return <Wallet className="h-4 w-4" />;
     }
   };
 
@@ -130,7 +130,7 @@ export default function Payouts() {
       case 'bank_transfer': return <Landmark className="h-4 w-4" />;
       case 'paypal': return <CreditCard className="h-4 w-4" />;
       case 'stripe': return <CreditCard className="h-4 w-4" />;
-      default: return <DollarSign className="h-4 w-4" />;
+      default: return <Wallet className="h-4 w-4" />;
     }
   };
 
@@ -209,7 +209,7 @@ export default function Payouts() {
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount</Label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Wallet className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="amount"
                     type="number"
@@ -262,7 +262,7 @@ export default function Payouts() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
-            <DollarSign className="h-4 w-4 text-success" />
+            <Wallet className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">${availableBalance.toFixed(2)}</div>
@@ -307,7 +307,7 @@ export default function Payouts() {
           <Card>
             <CardContent className="flex items-center justify-center py-8">
               <div className="text-center">
-                <DollarSign className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No payouts yet. Complete deals to start earning!</p>
               </div>
             </CardContent>

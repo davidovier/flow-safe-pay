@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { Handshake, Search, Eye, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Handshake, Search, Eye, Wallet, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Deal {
   id: string;
@@ -154,7 +154,7 @@ export default function AdminDeals() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-success" />
+            <Wallet className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">${totalValue.toFixed(2)}</div>

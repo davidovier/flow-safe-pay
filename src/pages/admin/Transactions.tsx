@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { CreditCard, Search, Download, TrendingUp, TrendingDown, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Search, Download, TrendingUp, TrendingDown, Wallet, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -110,7 +110,7 @@ export default function AdminTransactions() {
       case 'payment': return <TrendingDown className="h-4 w-4 text-destructive" />;
       case 'payout': return <TrendingUp className="h-4 w-4 text-success" />;
       case 'refund': return <TrendingUp className="h-4 w-4 text-warning" />;
-      case 'fee': return <DollarSign className="h-4 w-4 text-muted-foreground" />;
+      case 'fee': return <Wallet className="h-4 w-4 text-muted-foreground" />;
       default: return <CreditCard className="h-4 w-4" />;
     }
   };
@@ -176,7 +176,7 @@ export default function AdminTransactions() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-            <DollarSign className="h-4 w-4 text-success" />
+            <Wallet className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">${totalVolume.toFixed(2)}</div>

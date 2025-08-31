@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { DollarSign, CreditCard, Clock, CheckCircle, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { Wallet, CreditCard, Clock, CheckCircle, AlertCircle, ArrowUpRight } from 'lucide-react';
 
 interface Payment {
   id: string;
@@ -62,7 +62,7 @@ export default function Payments() {
       case 'processing': return <AlertCircle className="h-4 w-4" />;
       case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'failed': return <AlertCircle className="h-4 w-4" />;
-      default: return <DollarSign className="h-4 w-4" />;
+      default: return <Wallet className="h-4 w-4" />;
     }
   };
 
@@ -141,7 +141,7 @@ export default function Payments() {
           <Card>
             <CardContent className="flex items-center justify-center py-8">
               <div className="text-center">
-                <DollarSign className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No payments yet. Create a deal to get started!</p>
               </div>
             </CardContent>
