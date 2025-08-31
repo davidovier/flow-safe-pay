@@ -23,6 +23,8 @@ import AdminUsers from "./pages/admin/Users";
 import AdminDeals from "./pages/admin/Deals";
 import AdminTransactions from "./pages/admin/Transactions";
 import Settings from "./pages/Settings";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +42,8 @@ const App = () => (
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <AppLayout>

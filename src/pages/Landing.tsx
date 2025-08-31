@@ -152,6 +152,12 @@ export default function Landing() {
                 {t('security')}
               </button>
               <button 
+                onClick={() => navigate('/blog')} 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {t('blog')}
+              </button>
+              <button 
                 onClick={() => navigate('/pricing')} 
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -503,6 +509,7 @@ export default function Landing() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <a href="#features" className="block hover:text-foreground">Features</a>
                 <a href="#security" className="block hover:text-foreground">Security</a>
+                <button onClick={() => navigate('/blog')} className="block hover:text-foreground text-left">Blog</button>
                 <button onClick={() => navigate('/pricing')} className="block hover:text-foreground text-left">Pricing</button>
                 <a href="#" className="block hover:text-foreground">API</a>
               </div>
