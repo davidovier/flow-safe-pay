@@ -3,7 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { supabase } from '@/integrations/supabase/client';
+import { UsageDashboard } from '@/components/subscription/UsageDashboard';
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { 
   DollarSign, 
   Handshake, 
@@ -23,6 +26,12 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { userProfile } = useAuth();
+  const { 
+    canCreateDeal, 
+    getRemainingLimits, 
+    getCurrentPlan,
+    trackUsage 
+  } = useSubscription();
   const [stats, setStats] = useState<DashboardStats>({
     totalDeals: 0,
     activeDeals: 0,
@@ -31,6 +40,11 @@ export default function Dashboard() {
   });
   const [recentDeals, setRecentDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState<{
+    show: boolean;
+    reason: string;
+    suggestedPlan?: any;
+  }>({ show: false, reason: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -95,15 +109,39 @@ export default function Dashboard() {
     }
   };
 
+  const handleCreateProject = () => {
+    const check = canCreateDeal();
+    if (!check.allowed) {
+      setShowUpgradePrompt({
+        show: true,
+        reason: check.reason || 'Upgrade required',
+        suggestedPlan: check.upgradeRequired
+      });
+      return;
+    }
+    trackUsage('deal_created');
+    navigate('/projects/new');
+  };
+
   const getQuickActions = () => {
+    const currentPlan = getCurrentPlan();
+    const remaining = getRemainingLimits();
+
     if (userProfile?.role === 'BRAND') {
+      const canCreate = canCreateDeal();
       return [
-        { label: 'New Project', action: () => navigate('/projects/new'), icon: Plus },
+        { 
+          label: canCreate.allowed ? 'New Project' : 'New Project (Upgrade Required)', 
+          action: handleCreateProject, 
+          icon: Plus,
+          disabled: !canCreate.allowed,
+          tooltip: !canCreate.allowed ? canCreate.reason : undefined
+        },
         { label: 'Browse Creators', action: () => navigate('/creators'), icon: TrendingUp },
       ];
     } else if (userProfile?.role === 'CREATOR') {
       return [
-        { label: 'Submit Deliverable', action: () => navigate('/deliverables/new'), icon: Plus },
+        { label: 'Submit Deliverable', action: () => navigate('/deliverables'), icon: Plus },
         { label: 'View Payouts', action: () => navigate('/payouts'), icon: DollarSign },
       ];
     }
@@ -142,13 +180,32 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold mb-2">{getWelcomeMessage()}</h1>
         <div className="flex flex-wrap gap-2">
           {getQuickActions().map((action, index) => (
-            <Button key={index} onClick={action.action} size="sm">
+            <Button 
+              key={index} 
+              onClick={action.action} 
+              size="sm"
+              disabled={action.disabled}
+              title={action.tooltip}
+            >
               <action.icon className="h-4 w-4 mr-2" />
               {action.label}
             </Button>
           ))}
         </div>
       </div>
+
+      {/* Upgrade Prompt */}
+      {showUpgradePrompt.show && (
+        <UpgradePrompt 
+          reason={showUpgradePrompt.reason}
+          suggestedPlan={showUpgradePrompt.suggestedPlan}
+          variant="banner"
+          onDismiss={() => setShowUpgradePrompt({ show: false, reason: '' })}
+        />
+      )}
+
+      {/* Usage Dashboard */}
+      <UsageDashboard />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

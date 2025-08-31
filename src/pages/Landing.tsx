@@ -148,6 +148,12 @@ export default function Landing() {
               >
                 Security
               </button>
+              <button 
+                onClick={() => navigate('/pricing')} 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Pricing
+              </button>
               <Button variant="outline" onClick={() => navigate('/auth')}>Sign In</Button>
               <Button onClick={() => navigate('/auth')}>Get Started</Button>
             </div>
@@ -493,7 +499,7 @@ export default function Landing() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <a href="#features" className="block hover:text-foreground">Features</a>
                 <a href="#security" className="block hover:text-foreground">Security</a>
-                <a href="#" className="block hover:text-foreground">Pricing</a>
+                <button onClick={() => navigate('/pricing')} className="block hover:text-foreground text-left">Pricing</button>
                 <a href="#" className="block hover:text-foreground">API</a>
               </div>
             </div>

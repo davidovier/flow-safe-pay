@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { DollarSign, Clock, CheckCircle, AlertCircle, CreditCard, Bank, Plus, Download, Eye } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, AlertCircle, CreditCard, Landmark, Plus, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Payout {
@@ -127,7 +127,7 @@ export default function Payouts() {
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method) {
-      case 'bank_transfer': return <Bank className="h-4 w-4" />;
+      case 'bank_transfer': return <Landmark className="h-4 w-4" />;
       case 'paypal': return <CreditCard className="h-4 w-4" />;
       case 'stripe': return <CreditCard className="h-4 w-4" />;
       default: return <DollarSign className="h-4 w-4" />;

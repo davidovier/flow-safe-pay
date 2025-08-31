@@ -312,8 +312,8 @@ export default function Deliverables() {
               </Card>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Submit Deliverable Modal */}
       <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
