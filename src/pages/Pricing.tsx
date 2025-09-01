@@ -4,9 +4,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
-import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   Check, 
@@ -29,21 +26,35 @@ import {
   MessageCircle,
   HeartHandshake,
   Banknote,
-  User
+  User,
+  X
 } from 'lucide-react';
-import { SUBSCRIPTION_PLANS, PlanType } from '@/types/subscription';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { motion } from 'framer-motion';
 
-export default function Pricing() {
-  const [isYearly, setIsYearly] = useState(true); // Default to yearly for better value
-  const [scrollY, setScrollY] = useState(0);
-  const { userProfile } = useAuth();
-  const { t } = useTranslation();
-  const { subscription, getCurrentPlan, upgradeToUser, loading } = useSubscription();
-  const navigate = useNavigate();
+interface PlanFeature {
+  name: string;
+  included: boolean;
+  tooltip?: string;
+}
 
-  const currentPlan = getCurrentPlan();
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  yearlyPrice: number;
+  description: string;
+  popular?: boolean;
+  features: PlanFeature[];
+  cta: string;
+  color: string;
+  icon: typeof User;
+}
+
+export default function Pricing() {
+  const [isYearly, setIsYearly] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -51,30 +62,97 @@ export default function Pricing() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const planIcons = {
-    free: User,
-    starter: Rocket,
-    professional: Crown,
-    enterprise: Building,
-  };
-
-  const planColors = {
-    free: 'from-gray-500 to-gray-600',
-    starter: 'from-blue-500 to-blue-600',
-    professional: 'from-purple-500 to-purple-600',
-    enterprise: 'from-amber-500 to-amber-600',
-  };
-
-  const handlePlanSelect = async (planId: PlanType) => {
-    if (!userProfile) {
-      navigate('/auth');
-      return;
+  const plans: Plan[] = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      yearlyPrice: 0,
+      description: 'Perfect for getting started with creator partnerships',
+      icon: User,
+      color: 'from-gray-500 to-gray-600',
+      cta: 'Get Started Free',
+      features: [
+        { name: 'Up to 3 deals per month', included: true },
+        { name: '$500 transaction volume', included: true },
+        { name: 'Basic escrow protection', included: true },
+        { name: 'Email support', included: true },
+        { name: 'Mobile app access', included: true },
+        { name: 'Advanced analytics', included: false },
+        { name: 'Custom branding', included: false },
+        { name: 'API access', included: false },
+        { name: 'Priority support', included: false },
+        { name: 'Bulk payouts', included: false }
+      ]
+    },
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: 29,
+      yearlyPrice: 290,
+      description: 'Ideal for growing creators and small brands',
+      icon: Rocket,
+      color: 'from-blue-500 to-blue-600',
+      cta: 'Start Free Trial',
+      features: [
+        { name: 'Up to 20 deals per month', included: true },
+        { name: '$5,000 transaction volume', included: true },
+        { name: 'Enhanced escrow protection', included: true },
+        { name: 'Priority email support', included: true },
+        { name: 'Mobile app access', included: true },
+        { name: 'Advanced analytics', included: true },
+        { name: 'Custom branding', included: true },
+        { name: 'API access', included: false },
+        { name: '24/7 support', included: false },
+        { name: 'Bulk payouts', included: false }
+      ]
+    },
+    {
+      id: 'professional',
+      name: 'Professional',
+      price: 79,
+      yearlyPrice: 790,
+      description: 'For established creators and growing businesses',
+      popular: true,
+      icon: Crown,
+      color: 'from-purple-500 to-purple-600',
+      cta: 'Start Free Trial',
+      features: [
+        { name: 'Up to 100 deals per month', included: true },
+        { name: '$25,000 transaction volume', included: true },
+        { name: 'Premium escrow protection', included: true },
+        { name: '24/7 priority support', included: true },
+        { name: 'Mobile app access', included: true },
+        { name: 'Advanced analytics', included: true },
+        { name: 'Custom branding', included: true },
+        { name: 'Full API access', included: true },
+        { name: 'Dedicated success manager', included: true },
+        { name: 'Bulk payouts', included: true }
+      ]
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: 299,
+      yearlyPrice: 2990,
+      description: 'For large organizations and high-volume users',
+      icon: Building,
+      color: 'from-amber-500 to-amber-600',
+      cta: 'Contact Sales',
+      features: [
+        { name: 'Unlimited deals', included: true },
+        { name: 'Unlimited transaction volume', included: true },
+        { name: 'White-label solutions', included: true },
+        { name: 'Dedicated support team', included: true },
+        { name: 'Custom integrations', included: true },
+        { name: 'Advanced analytics suite', included: true },
+        { name: 'Custom branding & theming', included: true },
+        { name: 'Full API access + webhooks', included: true },
+        { name: 'SLA guarantees', included: true },
+        { name: 'Custom payment flows', included: true }
+      ]
     }
-
-    if (subscription?.planId === planId) return;
-
-    await upgradeToUser(planId);
-  };
+  ];
 
   const stats = [
     { value: '15,000+', label: 'Active Users', icon: Users },
@@ -82,6 +160,30 @@ export default function Pricing() {
     { value: '99.9%', label: 'Uptime', icon: Shield },
     { value: '<2s', label: 'Avg Response', icon: Clock },
   ];
+
+  const handlePlanSelect = (planId: string) => {
+    if (planId === 'free') {
+      navigate('/auth?plan=free');
+    } else if (planId === 'enterprise') {
+      navigate('/contact?inquiry=enterprise');
+    } else {
+      navigate(`/auth?plan=${planId}`);
+    }
+  };
+
+  const getPrice = (plan: Plan) => {
+    if (plan.price === 0) return 'Free';
+    const price = isYearly ? plan.yearlyPrice / 12 : plan.price;
+    return `$${Math.floor(price)}`;
+  };
+
+  const getSavings = (plan: Plan) => {
+    if (plan.price === 0 || !plan.yearlyPrice) return null;
+    const monthlyCost = plan.price * 12;
+    const yearlySavings = monthlyCost - plan.yearlyPrice;
+    const savingsPercent = Math.round((yearlySavings / monthlyCost) * 100);
+    return savingsPercent;
+  };
 
   return (
     <>
@@ -104,30 +206,28 @@ export default function Pricing() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate(userProfile ? '/dashboard' : '/')}
+                  onClick={() => navigate('/')}
                   className="text-gray-600 hover:text-gray-900"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {userProfile ? 'Dashboard' : 'Home'}
+                  Home
                 </Button>
               </div>
-              {!userProfile && (
-                <div className="flex items-center space-x-3">
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate('/auth')}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                    Sign In
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/auth')}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  >
-                    Get Started Free
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/auth')}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  onClick={() => navigate('/auth')}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Get Started Free
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -150,262 +250,158 @@ export default function Pricing() {
             </h1>
             
             <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Start free and unlock powerful features as you grow. No hidden fees, no surprises. 
-              Just transparent pricing that grows with your creator business.
+              Start free and grow with confidence. FlowPay's transparent pricing means you only pay for what you use, 
+              with no hidden fees or surprises.
             </p>
 
             {/* Stats Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-2xl mx-auto mb-16"
+            >
               {stats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-white rounded-xl shadow-md mb-3">
-                    <stat.icon className="h-6 w-6 text-blue-600" />
+                <div key={index} className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <stat.icon className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
                   <div className="text-sm text-gray-600">{stat.label}</div>
-                </motion.div>
+                </div>
               ))}
-            </div>
-
-            {/* Billing Toggle */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex items-center justify-center space-x-4 bg-white rounded-2xl p-2 shadow-lg inline-flex mb-8"
-            >
-              <Label 
-                htmlFor="billing-toggle" 
-                className={`px-6 py-3 rounded-xl cursor-pointer transition-all ${
-                  !isYearly ? 'bg-blue-600 text-white font-semibold' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Monthly
-              </Label>
-              <Switch
-                id="billing-toggle"
-                checked={isYearly}
-                onCheckedChange={setIsYearly}
-                className="mx-2"
-              />
-              <Label 
-                htmlFor="billing-toggle" 
-                className={`px-6 py-3 rounded-xl cursor-pointer transition-all ${
-                  isYearly ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Yearly
-                <Badge className="ml-2 bg-green-500 text-white text-xs px-2 py-1">
-                  Save 20%
-                </Badge>
-              </Label>
             </motion.div>
           </motion.div>
 
-          {/* Current Plan Notice */}
-          {currentPlan && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-center mb-12"
-            >
-              <Badge className="text-base px-6 py-3 bg-green-100 text-green-800 border border-green-200">
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Currently on {currentPlan.name} Plan
-              </Badge>
-            </motion.div>
-          )}
+          {/* Billing Toggle */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex items-center justify-center mb-16"
+          >
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border">
+              <div className="flex items-center space-x-4 px-4">
+                <Label 
+                  htmlFor="billing-toggle" 
+                  className={`text-sm font-medium transition-colors ${!isYearly ? 'text-gray-900' : 'text-gray-500'}`}
+                >
+                  Monthly
+                </Label>
+                <Switch
+                  id="billing-toggle"
+                  checked={isYearly}
+                  onCheckedChange={setIsYearly}
+                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-500 data-[state=checked]:to-purple-500"
+                />
+                <Label 
+                  htmlFor="billing-toggle" 
+                  className={`text-sm font-medium transition-colors ${isYearly ? 'text-gray-900' : 'text-gray-500'}`}
+                >
+                  Yearly
+                </Label>
+                <Badge variant="secondary" className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 ml-2">
+                  Save up to 17%
+                </Badge>
+              </div>
+            </div>
+          </motion.div>
 
-          {/* Enhanced Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-            {SUBSCRIPTION_PLANS.map((plan, index) => {
-              const Icon = planIcons[plan.id as keyof typeof planIcons];
-              const isCurrentPlan = subscription?.planId === plan.id;
-              const price = isYearly && plan.yearlyPrice ? plan.yearlyPrice / 12 : plan.price;
-              const yearlyPrice = plan.yearlyPrice;
-              const monthlyTotal = plan.price * 12;
-              const yearlyDiscount = yearlyPrice ? monthlyTotal - yearlyPrice : 0;
-
+          {/* Pricing Cards */}
+          <div className="grid lg:grid-cols-4 gap-8 max-w-7xl mx-auto mb-20">
+            {plans.map((plan, index) => {
+              const savings = getSavings(plan);
+              const Icon = plan.icon;
+              
               return (
                 <motion.div
                   key={plan.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className={`relative ${plan.popular ? 'lg:scale-110 z-10' : ''}`}
+                  transition={{ duration: 0.8, delay: 0.6 + index * 0.1 }}
+                  className={`relative ${plan.popular ? 'lg:scale-105 z-10' : ''}`}
                 >
-                  <Card className={`relative h-full border-2 transition-all duration-300 hover:shadow-2xl ${
+                  <Card className={`relative overflow-hidden border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
                     plan.popular 
-                      ? 'border-purple-500 bg-gradient-to-b from-purple-50 via-white to-blue-50 shadow-xl' 
-                      : isCurrentPlan 
-                      ? 'border-green-500 bg-gradient-to-b from-green-50 to-white' 
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-purple-300 bg-white shadow-2xl' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white/80 backdrop-blur-sm'
                   }`}>
-                    
-                    {/* Popular Badge */}
                     {plan.popular && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
-                        <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-sm font-medium shadow-lg">
-                          <Star className="h-3 w-3 mr-1 fill-current" />
+                      <div className="absolute top-0 left-0 right-0">
+                        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-center py-2 text-sm font-semibold">
+                          <Star className="h-4 w-4 inline mr-1" />
                           Most Popular
-                        </Badge>
+                        </div>
                       </div>
                     )}
                     
-                    {/* Current Plan Badge */}
-                    {isCurrentPlan && !plan.popular && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
-                        <Badge className="bg-green-600 text-white px-4 py-2 text-sm font-medium shadow-lg">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Current Plan
-                        </Badge>
-                      </div>
-                    )}
-
-                    <CardHeader className="text-center pb-6">
-                      {/* Icon with gradient background */}
-                      <div className={`mx-auto mb-4 p-4 bg-gradient-to-r ${
-                        planColors[plan.id as keyof typeof planColors]
-                      } rounded-2xl w-16 h-16 flex items-center justify-center shadow-lg`}>
+                    <CardHeader className={`text-center pb-8 ${plan.popular ? 'pt-12' : 'pt-8'}`}>
+                      <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center shadow-lg`}>
                         <Icon className="h-8 w-8 text-white" />
                       </div>
                       
                       <CardTitle className="text-2xl font-bold mb-2">{plan.name}</CardTitle>
-                      <CardDescription className="text-gray-600 text-sm leading-relaxed">
-                        {plan.description}
-                      </CardDescription>
+                      <CardDescription className="text-gray-600 mb-6">{plan.description}</CardDescription>
                       
-                      {/* Pricing Display */}
-                      <div className="mt-6">
-                        <div className="flex items-end justify-center">
-                          <span className="text-5xl font-bold text-gray-900">
-                            ${price === 0 ? '0' : Math.floor(price)}
-                          </span>
-                          {price > 0 && (
-                            <span className="text-lg text-gray-500 font-medium mb-1">/month</span>
+                      <div className="space-y-2">
+                        <div className="flex items-baseline justify-center">
+                          <span className="text-4xl font-bold text-gray-900">{getPrice(plan)}</span>
+                          {plan.price > 0 && (
+                            <span className="text-gray-500 ml-2">
+                              /{isYearly ? 'month' : 'month'}
+                            </span>
                           )}
                         </div>
                         
-                        {isYearly && yearlyPrice && yearlyDiscount > 0 && (
-                          <div className="mt-2 space-y-1">
-                            <div className="text-sm text-gray-600">
-                              Billed annually: ${yearlyPrice}
-                            </div>
-                            <Badge className="bg-green-100 text-green-700 text-xs px-2 py-1">
-                              Save ${yearlyDiscount}/year
-                            </Badge>
+                        {isYearly && savings && (
+                          <div className="text-sm text-green-600 font-medium">
+                            Save {savings}% annually
                           </div>
                         )}
                         
-                        {plan.id === 'free' && (
-                          <div className="text-sm text-gray-500 mt-2">
-                            Forever free • No credit card required
+                        {isYearly && plan.price > 0 && (
+                          <div className="text-sm text-gray-500">
+                            Billed ${plan.yearlyPrice} yearly
                           </div>
                         )}
                       </div>
                     </CardHeader>
 
-                    <CardContent className="px-6 pb-6">
-                      {/* Key Metrics */}
-                      <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-3">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600 flex items-center">
-                            <Banknote className="h-4 w-4 mr-2" />
-                            Deals per month
-                          </span>
-                          <span className="font-semibold text-gray-900">
-                            {plan.limits.dealsPerMonth === -1 ? 'Unlimited' : plan.limits.dealsPerMonth}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600 flex items-center">
-                            <TrendingUp className="h-4 w-4 mr-2" />
-                            Transaction volume
-                          </span>
-                          <span className="font-semibold text-gray-900">
-                            {plan.limits.transactionVolume === -1 
-                              ? 'Unlimited' 
-                              : `$${plan.limits.transactionVolume.toLocaleString()}`}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600 flex items-center">
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            Platform fee
-                          </span>
-                          <span className="font-semibold text-gray-900">
-                            {plan.id === 'free' ? '3.5%' : 
-                             plan.id === 'starter' ? '2.5%' :
-                             plan.id === 'professional' ? '2%' : '1.5%'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Feature List */}
-                      <div className="space-y-3">
-                        <div className="text-sm font-semibold text-gray-900 mb-3">Everything included:</div>
-                        <ul className="space-y-2">
-                          {plan.features.slice(0, plan.id === 'free' ? 4 : 6).map((feature, featureIndex) => (
-                            <li key={featureIndex} className="flex items-start gap-3 text-sm text-gray-600">
-                              <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                          {plan.features.length > (plan.id === 'free' ? 4 : 6) && (
-                            <li className="text-sm text-blue-600 font-medium">
-                              + {plan.features.length - (plan.id === 'free' ? 4 : 6)} more features
-                            </li>
-                          )}
-                        </ul>
-                      </div>
+                    <CardContent className="px-6 pb-8">
+                      <ul className="space-y-3">
+                        {plan.features.map((feature, featureIndex) => (
+                          <li key={featureIndex} className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 mt-1">
+                              {feature.included ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <X className="h-4 w-4 text-gray-300" />
+                              )}
+                            </div>
+                            <span className={`text-sm ${
+                              feature.included ? 'text-gray-900' : 'text-gray-400'
+                            }`}>
+                              {feature.name}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     </CardContent>
 
-                    <CardFooter className="px-6 pb-6">
-                      <Button 
-                        className={`w-full h-12 font-semibold transition-all duration-200 ${
-                          plan.popular 
-                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105' 
-                            : isCurrentPlan 
-                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                            : plan.id === 'free'
-                            ? 'bg-gray-900 text-white hover:bg-gray-800'
-                            : 'border-2 border-gray-300 hover:border-gray-400 bg-white text-gray-900 hover:bg-gray-50'
-                        }`}
-                        disabled={loading || isCurrentPlan}
+                    <CardFooter className="px-6 pb-8">
+                      <Button
                         onClick={() => handlePlanSelect(plan.id)}
+                        className={`w-full ${
+                          plan.popular
+                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+                            : plan.id === 'free'
+                            ? 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
+                            : `bg-gradient-to-r ${plan.color} hover:opacity-90`
+                        } text-white shadow-lg`}
                       >
-                        {isCurrentPlan ? (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Current Plan
-                          </>
-                        ) : plan.id === 'free' ? (
-                          <>
-                            <Rocket className="h-4 w-4 mr-2" />
-                            Start Free
-                          </>
-                        ) : (
-                          <>
-                            <ArrowRight className="h-4 w-4 mr-2" />
-                            {subscription?.planId === 'free' ? 'Upgrade Now' : 'Change Plan'}
-                          </>
-                        )}
+                        {plan.cta}
+                        <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
-                      
-                      {plan.id !== 'free' && (
-                        <div className="text-center mt-3">
-                          <div className="text-xs text-gray-500">
-                            14-day free trial • Cancel anytime
-                          </div>
-                        </div>
-                      )}
                     </CardFooter>
                   </Card>
                 </motion.div>
@@ -413,184 +409,98 @@ export default function Pricing() {
             })}
           </div>
 
-          {/* Enhanced FAQ Section */}
+          {/* FAQ Section */}
           <motion.div 
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="mt-32"
+            transition={{ duration: 0.8, delay: 1 }}
+            className="max-w-3xl mx-auto mb-20"
           >
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Frequently Asked Questions
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Everything you need to know about FlowPay pricing and plans
-              </p>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
+              <p className="text-gray-600">Everything you need to know about our pricing and plans</p>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+
+            <div className="space-y-8">
               {[
                 {
-                  icon: MessageCircle,
-                  question: "Can I change plans anytime?",
-                  answer: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any billing differences."
+                  question: "Can I change my plan at any time?",
+                  answer: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any charges."
                 },
                 {
-                  icon: TrendingUp,
-                  question: "What happens if I exceed my limits?",
-                  answer: "We'll notify you before you reach your limits. You can upgrade your plan or we'll temporarily increase your limits with prorated billing."
+                  question: "What happens if I exceed my plan limits?",
+                  answer: "We'll notify you before you reach your limits. You can either upgrade your plan or pay overage fees for additional usage."
                 },
                 {
-                  icon: Clock,
-                  question: "Do you offer free trials?",
-                  answer: "All paid plans include a 14-day free trial with full access to all features. No credit card required to start."
+                  question: "Do you offer refunds?",
+                  answer: "Yes, we offer a 30-day money-back guarantee on all paid plans. If you're not satisfied, contact us for a full refund."
                 },
                 {
-                  icon: DollarSign,
-                  question: "How do platform fees work?",
-                  answer: "Platform fees are automatically deducted from your earnings. Lower tiers have higher fees, but as you grow and upgrade, you keep more of what you earn."
-                },
-                {
-                  icon: HeartHandshake,
-                  question: "Is there a long-term commitment?",
-                  answer: "No commitments required. You can cancel anytime, and you'll retain access until the end of your billing period."
-                },
-                {
-                  icon: Award,
-                  question: "Do you offer discounts for annual plans?",
-                  answer: "Yes! Save up to 20% when you choose annual billing. Plus, get priority support and exclusive features."
+                  question: "How does the free trial work?",
+                  answer: "All paid plans include a 14-day free trial. No credit card required to start. You can cancel anytime during the trial period."
                 }
               ].map((faq, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 * index }}
-                  className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
+                  transition={{ duration: 0.6, delay: 1.2 + index * 0.1 }}
                 >
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                        <faq.icon className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{faq.question}</h3>
-                      <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
-                    </div>
-                  </div>
+                  <Card className="bg-white/80 backdrop-blur-sm border hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-semibold mb-2">{faq.question}</h3>
+                      <p className="text-gray-600">{faq.answer}</p>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
             </div>
           </motion.div>
 
-          {/* Enhanced Trust Section */}
+          {/* Final CTA */}
           <motion.div 
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="mt-24 mb-16"
+            transition={{ duration: 0.8, delay: 1.6 }}
+            className="text-center"
           >
-            <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold mb-4 text-gray-900">
-                Trusted by creators worldwide
-              </h3>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Join thousands of creators and brands who trust FlowPay with their business
-              </p>
-            </div>
-            
-            {/* Trust Badges */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-              {[
-                { 
-                  icon: Shield, 
-                  title: "Bank-Grade Security", 
-                  description: "Enterprise-level encryption and security protocols",
-                  color: "from-green-500 to-green-600" 
-                },
-                { 
-                  icon: Award, 
-                  title: "SOC 2 Compliant", 
-                  description: "Independently audited security and availability",
-                  color: "from-blue-500 to-blue-600" 
-                },
-                { 
-                  icon: CheckCircle2, 
-                  title: "99.9% Uptime", 
-                  description: "Reliable platform you can count on 24/7",
-                  color: "from-purple-500 to-purple-600" 
-                },
-                { 
-                  icon: Globe, 
-                  title: "Global Support", 
-                  description: "24/7 customer support in multiple languages",
-                  color: "from-orange-500 to-orange-600" 
-                }
-              ].map((trust, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 * index }}
-                  className="text-center"
-                >
-                  <div className={`w-16 h-16 mx-auto mb-4 bg-gradient-to-r ${trust.color} rounded-2xl flex items-center justify-center shadow-lg`}>
-                    <trust.icon className="h-8 w-8 text-white" />
+            <Card className="bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 text-white border-0 shadow-2xl max-w-4xl mx-auto">
+              <CardContent className="p-12">
+                <div className="flex items-center justify-center mb-6">
+                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                    <Rocket className="h-8 w-8 text-white" />
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">{trust.title}</h4>
-                  <p className="text-sm text-gray-600">{trust.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* CTA Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1 }}
-            className="mt-24 mb-16"
-          >
-            <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 rounded-3xl p-12 text-center text-white relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm"></div>
-              <div className="relative z-10">
-                <h3 className="text-4xl font-bold mb-4">
-                  Ready to supercharge your creator business?
-                </h3>
-                <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-                  Join thousands of successful creators who've already made the switch to FlowPay. 
-                  Start free and scale as you grow.
+                </div>
+                
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  Ready to get started?
+                </h2>
+                <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
+                  Join thousands of creators and brands who trust FlowPay for secure, 
+                  instant payments. Start your free trial today.
                 </p>
+                
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
+                  <Button
                     size="lg"
-                    className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                     onClick={() => navigate('/auth')}
+                    className="bg-white text-blue-600 hover:bg-gray-100 shadow-lg text-lg px-8"
                   >
-                    <Rocket className="h-5 w-5 mr-2" />
-                    Start Free Today
+                    Start Free Trial
+                    <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
-                  <Button 
+                  <Button
                     size="lg"
                     variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold transition-all"
-                    onClick={() => navigate('/auth')}
+                    onClick={() => navigate('/contact')}
+                    className="border-white text-white hover:bg-white/10 text-lg px-8"
                   >
                     <MessageCircle className="h-5 w-5 mr-2" />
                     Talk to Sales
                   </Button>
                 </div>
-                <div className="mt-6 text-sm text-blue-100">
-                  No credit card required • Setup in under 2 minutes
-                </div>
-              </div>
-              
-              {/* Background decoration */}
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
-              <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/5 rounded-full"></div>
-            </div>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
       </div>
