@@ -413,7 +413,6 @@ export default function ProjectDetail() {
                 <DialogTitle>Create New Deal</DialogTitle>
               </DialogHeader>
               <CreateDealForm 
-                selectedProjectId={project.id}
                 onSuccess={() => {
                   setIsCreateDealModalOpen(false);
                   fetchProjectDetails();

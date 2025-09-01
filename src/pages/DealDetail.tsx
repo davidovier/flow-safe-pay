@@ -70,13 +70,13 @@ interface Deal {
     created_at: string;
     deliverables?: Array<{
       id: string;
-      title: string;
-      description: string;
-      status: string;
+      milestone_id: string;
+      url: string | null;
+      file_hash: string | null;
       submitted_at: string | null;
-      submission_url: string | null;
-      file_name: string | null;
-      feedback: string | null;
+      checks: any;
+      created_at: string;
+      updated_at: string;
     }>;
   }>;
 }
@@ -279,39 +279,37 @@ export default function DealDetail() {
         return;
       }
 
-      // Use the review_deliverable function if available
-      const { error } = await supabase.rpc('review_deliverable', {
-        deliverable_uuid: deliverable.id,
-        action: reviewData.action,
-        feedback_text: reviewData.feedback || null
-      });
+      // Direct database update since review_deliverable function doesn't exist
+      try {
+        // Update deliverable status directly
+        const status = reviewData.action === 'approve' ? 'approved' : 
+                      reviewData.action === 'reject' ? 'rejected' : 'revision_requested';
+        
+        // Update deliverable checks field to store review data
+        const { error: updateError } = await supabase
+          .from('deliverables')
+          .update({
+            checks: { 
+              status: status, 
+              feedback: reviewData.feedback, 
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: userProfile.id
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', deliverable.id);
 
-      if (error) {
-        // If function doesn't exist, fall back to direct database update
-        if (error.code === 'PGRST202' || error.message?.includes('function')) {
-          const status = reviewData.action === 'approve' ? 'approved' : 
-                        reviewData.action === 'reject' ? 'rejected' : 'revision_requested';
-          
-          const { error: updateError } = await supabase
-            .from('deliverables')
-            .update({
-              status: status,
-              feedback: reviewData.feedback,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', deliverable.id);
+        if (updateError) throw updateError;
 
-          if (updateError) throw updateError;
+        // Update milestone state
+        const milestoneState = reviewData.action === 'approve' ? 'APPROVED' : 'SUBMITTED';
+        await supabase
+          .from('milestones')
+          .update({ state: milestoneState })
+          .eq('id', reviewData.milestoneId);
 
-          // Update milestone state
-          const milestoneState = reviewData.action === 'approve' ? 'APPROVED' : 'SUBMITTED';
-          await supabase
-            .from('milestones')
-            .update({ state: milestoneState })
-            .eq('id', reviewData.milestoneId);
-        } else {
-          throw error;
-        }
+      } catch (error: any) {
+        throw error;
       }
 
       toast({
@@ -885,23 +883,27 @@ export default function DealDetail() {
                         <div key={deliverable.id} className="border rounded-lg p-3">
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
-                              <h5 className="font-medium">{deliverable.title}</h5>
-                              <p className="text-sm text-muted-foreground">{deliverable.description}</p>
+                              <h5 className="font-medium">
+                                {deliverable.url ? 'Submitted Content' : `Deliverable #${index + 1}`}
+                              </h5>
+                              <p className="text-sm text-muted-foreground">
+                                {deliverable.url ? 'Content submission available' : 'Deliverable submission'}
+                              </p>
                               {deliverable.submitted_at && (
                                 <p className="text-xs text-muted-foreground">
                                   Submitted {formatDate(deliverable.submitted_at)}
                                 </p>
                               )}
-                              {deliverable.feedback && (
+                              {deliverable.checks?.feedback && (
                                 <div className="mt-2 p-2 bg-muted rounded text-sm">
-                                  <strong>Feedback:</strong> {deliverable.feedback}
+                                  <strong>Feedback:</strong> {deliverable.checks.feedback}
                                 </div>
                               )}
                             </div>
                             <div className="flex space-x-2">
-                              {deliverable.submission_url && (
+                              {deliverable.url && (
                                 <Button variant="ghost" size="sm" asChild>
-                                  <a href={deliverable.submission_url} target="_blank" rel="noopener noreferrer">
+                                  <a href={deliverable.url} target="_blank" rel="noopener noreferrer">
                                     <Eye className="h-4 w-4" />
                                   </a>
                                 </Button>

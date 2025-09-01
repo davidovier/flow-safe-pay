@@ -42,15 +42,16 @@ async function setupTestAccounts() {
   
   for (const account of testAccounts) {
     try {
-      // Check if user already exists
-      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(account.email);
+      // Check if user already exists by listing all users and filtering
+      const { data: allUsers } = await supabase.auth.admin.listUsers();
+      const existingUser = allUsers?.users?.find((u: any) => u.email === account.email);
       
-      if (existingUser.user) {
+      if (existingUser) {
         console.log(`User ${account.email} already exists, updating email verification...`);
         
         // Update user to be email verified
         const { error: updateError } = await supabase.auth.admin.updateUserById(
-          existingUser.user.id,
+          existingUser.id,
           {
             email_confirm: true,
             user_metadata: {
@@ -71,7 +72,7 @@ async function setupTestAccounts() {
         const { error: profileError } = await supabase
           .from('users')
           .upsert({
-            id: existingUser.user.id,
+            id: existingUser.id,
             email: account.email,
             role: account.role as 'BRAND' | 'CREATOR',
             first_name: account.first_name,

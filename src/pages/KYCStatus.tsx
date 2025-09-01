@@ -55,25 +55,20 @@ export default function KYCStatus() {
 
     setLoading(true);
     try {
-      // First try to fetch from kyc_applications table
-      const { data: applicationData, error: applicationError } = await supabase
-        .from('kyc_applications')
-        .select('*')
-        .eq('user_id', userProfile.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (applicationError && applicationError.code !== '42P01') {
-        throw applicationError;
-      }
-
-      if (applicationData && applicationData.length > 0) {
-        setKycApplication(applicationData[0]);
-      } else if (!applicationError) {
-        // Table exists but no application found
+      // KYC applications table doesn't exist yet, use user profile KYC status
+      console.log('Using user profile KYC status');
+      
+      // Mock application data from user profile 
+      if (userProfile.kyc_status && userProfile.kyc_status !== 'pending') {
+        setKycApplication({
+          id: 'mock-' + userProfile.id,
+          status: userProfile.kyc_status as any,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      } else {
         setKycApplication(null);
       }
-      // If table doesn't exist (42P01), we'll just show status from user profile
 
     } catch (error) {
       console.error('Error fetching KYC status:', error);

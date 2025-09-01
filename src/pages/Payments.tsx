@@ -199,7 +199,7 @@ export default function Payments() {
                 <p className="text-sm text-muted-foreground">Connected and verified</p>
               </div>
             </div>
-            <Badge variant="success">Active</Badge>
+            <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">Active</Badge>
           </div>
           <Button variant="outline" className="w-full h-16 border-dashed">
             <CreditCard className="h-4 w-4 mr-2" />

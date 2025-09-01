@@ -315,8 +315,7 @@ export async function validateFile(
   if (config.maxDimensions && file.type.startsWith('image/')) {
     const dimensions = await getImageDimensions(file);
     if (dimensions) {
-      fileInfo.dimensions = dimensions;
-      
+      // Note: dimensions are validated but not stored in fileInfo interface
       if (dimensions.width > config.maxDimensions.width || 
           dimensions.height > config.maxDimensions.height) {
         errors.push(`Image dimensions ${dimensions.width}x${dimensions.height} exceed maximum ${config.maxDimensions.width}x${config.maxDimensions.height}`);
