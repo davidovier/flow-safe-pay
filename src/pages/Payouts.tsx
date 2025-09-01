@@ -100,96 +100,105 @@ export default function Payouts() {
       let payoutsData: Payout[] = [];
       let paymentMethodsData: PaymentMethod[] = [];
       
-      // Fetch payouts with related data
-      const { data: payoutsResult, error: payoutsError } = await supabase
-        .from('payouts')
-        .select(`
-          *,
-          payment_methods!payment_method_id (
-            id, type, name, details
-          ),
-          deals!deal_id (
-            id,
-            projects!project_id (
-              title,
-              users!brand_id (
-                first_name, last_name
-              )
-            )
-          )
-        `)
-        .eq('user_id', userProfile.id)
-        .order('requested_at', { ascending: false });
+      // Try to fetch payouts with a simple query first
+      try {
+        const { data: payoutsResult, error: payoutsError } = await supabase
+          .from('payouts')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-      // Handle payouts errors gracefully
-      if (payoutsError) {
-        console.error('Payouts fetch error:', payoutsError);
-        // If table doesn't exist, continue with empty array
-        if (payoutsError.code !== 'PGRST301' && !payoutsError.message?.includes('does not exist')) {
-          throw payoutsError;
-        }
-      } else {
-        payoutsData = Array.isArray(payoutsResult) ? payoutsResult : [];
-      }
-
-      // Fetch payment methods
-      const { data: paymentMethodsResult, error: paymentMethodsError } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('user_id', userProfile.id)
-        .order('is_default', { ascending: false });
-
-      // Handle payment methods errors gracefully
-      if (paymentMethodsError) {
-        console.error('Payment methods fetch error:', paymentMethodsError);
-        // If table doesn't exist, continue with empty array
-        if (paymentMethodsError.code !== 'PGRST301' && !paymentMethodsError.message?.includes('does not exist')) {
-          throw paymentMethodsError;
-        }
-      } else {
-        paymentMethodsData = Array.isArray(paymentMethodsResult) ? paymentMethodsResult : [];
-      }
-
-      // Fetch user balance
-      const { data: balanceData, error: balanceError } = await supabase
-        .from('user_balances')
-        .select('*')
-        .eq('user_id', userProfile.id)
-        .eq('currency', 'usd')
-        .single();
-
-      // Handle balance data
-      if (balanceError) {
-        console.error('Balance fetch error:', balanceError);
-        
-        // If no balance record exists, try to create one
-        if (balanceError.code === 'PGRST116') {
-          try {
-            const { error: updateError } = await supabase.rpc('update_user_balance', {
-              user_uuid: userProfile.id
-            });
-            
-            if (!updateError) {
-              // Fetch again after creation
-              const { data: newBalanceData } = await supabase
-                .from('user_balances')
-                .select('*')
-                .eq('user_id', userProfile.id)
-                .eq('currency', 'usd')
-                .single();
-              
-              if (newBalanceData) {
-                setUserBalance(newBalanceData);
-              }
-            }
-          } catch (balanceUpdateError) {
-            console.error('Balance update error:', balanceUpdateError);
-            // Keep default balance if function doesn't exist
+        if (payoutsError) {
+          // If column doesn't exist, try different approaches
+          if (payoutsError.message?.includes('user_id') || payoutsError.message?.includes('column')) {
+            console.warn('Enhanced payouts schema not available, using empty state');
+            payoutsData = [];
+          } else if (payoutsError.code === 'PGRST301' || payoutsError.message?.includes('does not exist')) {
+            console.warn('Payouts table not found, using empty state');
+            payoutsData = [];
+          } else {
+            throw payoutsError;
           }
+        } else {
+          // Filter payouts for current user if possible
+          const filteredPayouts = Array.isArray(payoutsResult) ? payoutsResult.filter(payout => {
+            // Try to match by user_id if it exists, otherwise show empty for safety
+            return payout.user_id === userProfile.id;
+          }) : [];
+          
+          payoutsData = filteredPayouts;
         }
-        // If table/function doesn't exist, keep default balance
-      } else if (balanceData) {
-        setUserBalance(balanceData);
+      } catch (payoutsError: any) {
+        console.error('Payouts fetch error:', payoutsError);
+        payoutsData = [];
+      }
+
+      // Try to fetch payment methods
+      try {
+        const { data: paymentMethodsResult, error: paymentMethodsError } = await supabase
+          .from('payment_methods')
+          .select('*')
+          .eq('user_id', userProfile.id)
+          .order('is_default', { ascending: false });
+
+        if (paymentMethodsError) {
+          if (paymentMethodsError.code === 'PGRST301' || paymentMethodsError.message?.includes('does not exist')) {
+            console.warn('Payment methods table not found, using empty state');
+            paymentMethodsData = [];
+          } else {
+            throw paymentMethodsError;
+          }
+        } else {
+          paymentMethodsData = Array.isArray(paymentMethodsResult) ? paymentMethodsResult : [];
+        }
+      } catch (paymentMethodsError: any) {
+        console.error('Payment methods fetch error:', paymentMethodsError);
+        paymentMethodsData = [];
+      }
+
+      // Try to fetch user balance
+      try {
+        const { data: balanceData, error: balanceError } = await supabase
+          .from('user_balances')
+          .select('*')
+          .eq('user_id', userProfile.id)
+          .eq('currency', 'usd')
+          .single();
+
+        if (balanceError) {
+          if (balanceError.code === 'PGRST116') {
+            // No balance record exists - try to create one if function exists
+            try {
+              const { error: updateError } = await supabase.rpc('update_user_balance', {
+                user_uuid: userProfile.id
+              });
+              
+              if (!updateError) {
+                // Fetch again after creation
+                const { data: newBalanceData } = await supabase
+                  .from('user_balances')
+                  .select('*')
+                  .eq('user_id', userProfile.id)
+                  .eq('currency', 'usd')
+                  .single();
+                
+                if (newBalanceData) {
+                  setUserBalance(newBalanceData);
+                }
+              }
+            } catch (balanceUpdateError: any) {
+              console.warn('Balance calculation function not available:', balanceUpdateError);
+              // Keep default balance
+            }
+          } else if (balanceError.code === 'PGRST301' || balanceError.message?.includes('does not exist')) {
+            console.warn('User balances table not found, using default balance');
+          }
+        } else if (balanceData) {
+          setUserBalance(balanceData);
+        }
+      } catch (balanceError: any) {
+        console.error('Balance fetch error:', balanceError);
+        // Keep default balance
       }
 
       setPayouts(payoutsData);
@@ -198,8 +207,11 @@ export default function Payouts() {
     } catch (error: any) {
       console.error('Error fetching payout data:', error);
       
-      // Only show user-facing errors for actual data issues
-      if (!error.message?.includes('does not exist') && error.code !== 'PGRST301') {
+      // Only show user-facing errors for critical issues
+      if (!error.message?.includes('does not exist') && 
+          !error.message?.includes('column') &&
+          error.code !== 'PGRST301' && 
+          error.code !== 'PGRST116') {
         toast({
           title: "Error",
           description: "Failed to load payout information. Please try again.",
