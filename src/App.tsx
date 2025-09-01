@@ -32,6 +32,15 @@ import CreatorProfile from "./pages/CreatorProfile";
 import DealDetail from "./pages/DealDetail";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import Security from "./pages/Security";
+import Help from "./pages/Help";
+import Contact from "./pages/Contact";
+import Status from "./pages/Status";
+import Community from "./pages/Community";
+import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +66,15 @@ const App = () => {
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/cookies" element={<Cookies />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/status" element={<Status />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <AppLayout>
