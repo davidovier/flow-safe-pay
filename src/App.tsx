@@ -41,6 +41,12 @@ import Contact from "./pages/Contact";
 import Status from "./pages/Status";
 import Community from "./pages/Community";
 import ApiDocs from "./pages/ApiDocs";
+import Api from "./pages/Api";
+import Integrations from "./pages/Integrations";
+import Changelog from "./pages/Changelog";
+import Partnerships from "./pages/Partnerships";
+import MediaKit from "./pages/MediaKit";
+import Compliance from "./pages/Compliance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,6 +81,12 @@ const App = () => {
             <Route path="/status" element={<Status />} />
             <Route path="/community" element={<Community />} />
             <Route path="/api-docs" element={<ApiDocs />} />
+            <Route path="/api" element={<Api />} />
+            <Route path="/integrations" element={<Integrations />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/partnerships" element={<Partnerships />} />
+            <Route path="/media-kit" element={<MediaKit />} />
+            <Route path="/compliance" element={<Compliance />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <AppLayout>
