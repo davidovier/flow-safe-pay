@@ -62,6 +62,9 @@ export default function Deliverables() {
   useEffect(() => {
     if (userProfile?.role === 'CREATOR') {
       fetchDeliverables();
+    } else if (userProfile?.role) {
+      // If user is not a creator, set loading to false and show appropriate message
+      setLoading(false);
     }
   }, [userProfile]);
 
@@ -74,16 +77,35 @@ export default function Deliverables() {
         creator_uuid: userProfile.id
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database function error:', error);
+        
+        // If function doesn't exist or returns an error, set empty array and don't show error to user
+        if (error.code === 'PGRST202' || error.message?.includes('function') || error.message?.includes('does not exist')) {
+          console.warn('Database function not found, showing empty state');
+          setDeliverables([]);
+          return;
+        }
+        
+        throw error;
+      }
 
-      setDeliverables(data || []);
-    } catch (error) {
+      // Handle both null and undefined responses
+      setDeliverables(Array.isArray(data) ? data : []);
+    } catch (error: any) {
       console.error('Error fetching deliverables:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load deliverables. Please try again.",
-        variant: "destructive"
-      });
+      
+      // Only show user-facing error for actual data fetching issues, not missing functions
+      if (!error.message?.includes('function') && !error.message?.includes('does not exist')) {
+        toast({
+          title: "Error",
+          description: "Failed to load deliverables. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+      // Always set empty array so UI doesn't break
+      setDeliverables([]);
     } finally {
       setLoading(false);
     }
@@ -357,10 +379,24 @@ export default function Deliverables() {
         </div>
       </div>
 
-      {/* Pending Deliverables */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">Pending Submissions</h2>
-        {pendingDeliverables.length === 0 ? (
+      {/* Show overall empty state if no deliverables at all */}
+      {deliverables.length === 0 ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <FileText className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No Deliverables Yet</h3>
+              <p className="text-muted-foreground mb-4">You don't have any deliverables assigned yet.</p>
+              <p className="text-sm text-muted-foreground">Deliverables will appear here once brands create projects and assign them to you.</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Pending Deliverables */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">Pending Submissions</h2>
+            {pendingDeliverables.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center py-8">
               <div className="text-center">
@@ -433,113 +469,115 @@ export default function Deliverables() {
               );
             })}
           </div>
-        )}
-      </div>
-
-      {/* Submitted Deliverables */}
-      {submittedDeliverables.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">Under Review</h2>
-          <div className="grid gap-4">
-            {submittedDeliverables.map((deliverable) => (
-              <Card key={deliverable.deliverable_id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <CardTitle className="text-lg">{deliverable.deliverable_title}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {deliverable.brand_name} • {deliverable.project_title}
-                      </p>
-                      <p className="text-sm font-medium text-primary">
-                        {formatCurrency(deliverable.milestone_amount)} milestone
-                      </p>
-                    </div>
-                    <Badge 
-                      variant={getStatusColor(deliverable.deliverable_status) as any}
-                      className="flex items-center gap-1"
-                    >
-                      {getStatusIcon(deliverable.deliverable_status)}
-                      {getStatusText(deliverable.deliverable_status)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm">{deliverable.deliverable_description}</p>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Submitted: {formatDate(deliverable.deliverable_submitted_at!)}</span>
-                    {deliverable.submission_url && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={deliverable.submission_url} target="_blank" rel="noopener noreferrer">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Submission
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Completed Deliverables */}
-      {completedDeliverables.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">Completed</h2>
-          <div className="grid gap-4">
-            {completedDeliverables.map((deliverable) => (
-              <Card key={deliverable.deliverable_id} className="opacity-80">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <CardTitle className="text-lg">{deliverable.deliverable_title}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {deliverable.brand_name} • {deliverable.project_title}
-                      </p>
-                      <p className="text-sm font-medium text-primary">
-                        {formatCurrency(deliverable.milestone_amount)} milestone
-                      </p>
-                    </div>
-                    <Badge 
-                      variant={getStatusColor(deliverable.deliverable_status) as any}
-                      className="flex items-center gap-1"
-                    >
-                      {getStatusIcon(deliverable.deliverable_status)}
-                      {getStatusText(deliverable.deliverable_status)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm">{deliverable.deliverable_description}</p>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Submitted: {formatDate(deliverable.deliverable_submitted_at!)}</span>
-                    {deliverable.submission_url && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={deliverable.submission_url} target="_blank" rel="noopener noreferrer">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Submission
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                  {deliverable.deliverable_feedback && (
-                    <div className={`mt-3 p-3 rounded text-sm ${
-                      deliverable.deliverable_status === 'approved' 
-                        ? 'bg-success/10 border border-success/20' 
-                        : 'bg-destructive/10 border border-destructive/20'
-                    }`}>
-                      <strong className={deliverable.deliverable_status === 'approved' ? 'text-success' : 'text-destructive'}>
-                        {deliverable.deliverable_status === 'approved' ? 'Approved:' : 'Rejection Reason:'}
-                      </strong>
-                      <p className="mt-1">{deliverable.deliverable_feedback}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+          {/* Submitted Deliverables */}
+          {submittedDeliverables.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-foreground">Under Review</h2>
+              <div className="grid gap-4">
+                {submittedDeliverables.map((deliverable) => (
+                  <Card key={deliverable.deliverable_id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <CardTitle className="text-lg">{deliverable.deliverable_title}</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {deliverable.brand_name} • {deliverable.project_title}
+                          </p>
+                          <p className="text-sm font-medium text-primary">
+                            {formatCurrency(deliverable.milestone_amount)} milestone
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={getStatusColor(deliverable.deliverable_status) as any}
+                          className="flex items-center gap-1"
+                        >
+                          {getStatusIcon(deliverable.deliverable_status)}
+                          {getStatusText(deliverable.deliverable_status)}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm">{deliverable.deliverable_description}</p>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>Submitted: {deliverable.deliverable_submitted_at ? formatDate(deliverable.deliverable_submitted_at) : 'Recently'}</span>
+                        {deliverable.submission_url && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={deliverable.submission_url} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Submission
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed Deliverables */}
+          {completedDeliverables.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-foreground">Completed</h2>
+              <div className="grid gap-4">
+                {completedDeliverables.map((deliverable) => (
+                  <Card key={deliverable.deliverable_id} className="opacity-80">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <CardTitle className="text-lg">{deliverable.deliverable_title}</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {deliverable.brand_name} • {deliverable.project_title}
+                          </p>
+                          <p className="text-sm font-medium text-primary">
+                            {formatCurrency(deliverable.milestone_amount)} milestone
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={getStatusColor(deliverable.deliverable_status) as any}
+                          className="flex items-center gap-1"
+                        >
+                          {getStatusIcon(deliverable.deliverable_status)}
+                          {getStatusText(deliverable.deliverable_status)}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm">{deliverable.deliverable_description}</p>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>Submitted: {deliverable.deliverable_submitted_at ? formatDate(deliverable.deliverable_submitted_at) : 'Recently'}</span>
+                        {deliverable.submission_url && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={deliverable.submission_url} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Submission
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                      {deliverable.deliverable_feedback && (
+                        <div className={`mt-3 p-3 rounded text-sm ${
+                          deliverable.deliverable_status === 'approved' 
+                            ? 'bg-success/10 border border-success/20' 
+                            : 'bg-destructive/10 border border-destructive/20'
+                        }`}>
+                          <strong className={deliverable.deliverable_status === 'approved' ? 'text-success' : 'text-destructive'}>
+                            {deliverable.deliverable_status === 'approved' ? 'Approved:' : 'Rejection Reason:'}
+                          </strong>
+                          <p className="mt-1">{deliverable.deliverable_feedback}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Submit Deliverable Modal */}
