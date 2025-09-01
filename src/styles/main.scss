@@ -1,0 +1,472 @@
+/**
+ * FlowPay Main SCSS - Modern, secure, and performance-optimized styles
+ */
+
+// Import Tailwind CSS base
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// SCSS Variables for FlowPay Brand
+$primary-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+$success-gradient: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+$warning-gradient: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+$neutral-gradient: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+
+$border-radius-sm: 0.5rem;
+$border-radius-md: 0.75rem;
+$border-radius-lg: 1rem;
+$border-radius-xl: 1.5rem;
+
+$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+$shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+$shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+$shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+// Animation Variables
+$transition-fast: 0.15s ease-out;
+$transition-normal: 0.2s ease-out;
+$transition-slow: 0.3s ease-out;
+
+// Typography Scale
+$font-sizes: (
+  'xs': 0.75rem,
+  'sm': 0.875rem,
+  'base': 1rem,
+  'lg': 1.125rem,
+  'xl': 1.25rem,
+  '2xl': 1.5rem,
+  '3xl': 1.875rem,
+  '4xl': 2.25rem,
+  '5xl': 3rem
+);
+
+// Spacing Scale
+$spacing: (
+  '1': 0.25rem,
+  '2': 0.5rem,
+  '3': 0.75rem,
+  '4': 1rem,
+  '5': 1.25rem,
+  '6': 1.5rem,
+  '8': 2rem,
+  '10': 2.5rem,
+  '12': 3rem,
+  '16': 4rem,
+  '20': 5rem,
+  '24': 6rem
+);
+
+// SCSS Mixins for FlowPay Components
+@mixin glassmorphism($opacity: 0.8) {
+  background: rgba(255, 255, 255, $opacity);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@mixin gradient-button($gradient: $primary-gradient) {
+  background: $gradient;
+  border: none;
+  color: white;
+  font-weight: 600;
+  transition: all $transition-normal;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: $shadow-lg;
+    filter: brightness(1.05);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+@mixin security-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: $border-radius-md;
+  font-size: map-get($font-sizes, 'xs');
+  color: rgb(21, 128, 61);
+  font-weight: 500;
+}
+
+@mixin input-field {
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: $border-radius-xl;
+  font-size: map-get($font-sizes, 'base');
+  transition: all $transition-normal;
+  
+  &:focus {
+    outline: none;
+    border-color: rgb(59, 130, 246);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &::placeholder {
+    color: rgb(156, 163, 175);
+  }
+  
+  &:disabled {
+    background-color: rgb(249, 250, 251);
+    cursor: not-allowed;
+  }
+}
+
+@mixin card-container($padding: map-get($spacing, '6')) {
+  background: white;
+  border-radius: $border-radius-xl;
+  box-shadow: $shadow-xl;
+  border: 0;
+  padding: $padding;
+  
+  @include glassmorphism(0.9);
+}
+
+// Base Styles with Security Focus
+html {
+  scroll-behavior: smooth;
+  
+  // Security: Prevent content selection in sensitive areas
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  // Security: Prevent drag and drop of sensitive elements
+  .secure-content {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+  }
+}
+
+// FlowPay Component Styles
+.flowpay-auth-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 50%, #f3e8ff 100%);
+  position: relative;
+  overflow: hidden;
+  
+  // Animated background elements
+  &::before {
+    content: '';
+    position: absolute;
+    top: -10rem;
+    right: -10rem;
+    width: 20rem;
+    height: 20rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-radius: 50%;
+    filter: blur(3rem);
+    animation: pulse 4s ease-in-out infinite;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10rem;
+    left: -10rem;
+    width: 20rem;
+    height: 20rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+    border-radius: 50%;
+    filter: blur(3rem);
+    animation: pulse 4s ease-in-out infinite 2s;
+  }
+}
+
+.flowpay-auth-card {
+  @include card-container();
+  max-width: 28rem;
+  margin: 0 auto;
+  
+  .security-indicator {
+    @include security-badge;
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .form-input {
+    @include input-field;
+  }
+  
+  .primary-button {
+    @include gradient-button($primary-gradient);
+    width: 100%;
+    height: 3rem;
+    border-radius: $border-radius-xl;
+    font-size: map-get($font-sizes, 'base');
+  }
+  
+  .success-button {
+    @include gradient-button($success-gradient);
+    width: 100%;
+    height: 3rem;
+    border-radius: $border-radius-xl;
+    font-size: map-get($font-sizes, 'base');
+  }
+}
+
+// Security-focused form styles
+.secure-form {
+  .field-error {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+    padding: 0.375rem;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: $border-radius-sm;
+    font-size: map-get($font-sizes, 'xs');
+    color: rgb(185, 28, 28);
+  }
+  
+  .rate-limit-warning {
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: $border-radius-md;
+    text-align: center;
+    
+    .warning-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: rgb(185, 28, 28);
+      font-weight: 500;
+      font-size: map-get($font-sizes, 'sm');
+    }
+    
+    .remaining-attempts {
+      margin-top: 0.25rem;
+      font-size: map-get($font-sizes, 'xs');
+      color: rgb(153, 27, 27);
+    }
+  }
+}
+
+// Password strength indicator
+.password-strength {
+  margin-top: 0.5rem;
+  
+  .strength-bars {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    
+    .strength-bar {
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background-color: rgb(229, 231, 235);
+      transition: background-color $transition-normal;
+      
+      &.weak {
+        background-color: rgb(239, 68, 68);
+      }
+      
+      &.medium {
+        background-color: rgb(245, 158, 11);
+      }
+      
+      &.strong {
+        background-color: rgb(34, 197, 94);
+      }
+    }
+  }
+  
+  .strength-requirements {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    .requirement {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: map-get($font-sizes, 'xs');
+      
+      &.met {
+        color: rgb(34, 197, 94);
+      }
+      
+      &.unmet {
+        color: rgb(156, 163, 175);
+      }
+    }
+  }
+}
+
+// Loading states with security considerations
+.secure-loading {
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+  }
+  
+  .loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 11;
+  }
+}
+
+// Responsive Design with Security in Mind
+@media (max-width: 640px) {
+  .flowpay-auth-page {
+    padding: map-get($spacing, '4');
+    
+    &::before,
+    &::after {
+      width: 15rem;
+      height: 15rem;
+    }
+  }
+  
+  .flowpay-auth-card {
+    @include card-container(map-get($spacing, '4'));
+  }
+}
+
+// Dark mode support with security considerations
+@media (prefers-color-scheme: dark) {
+  .flowpay-auth-page {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+  }
+  
+  .flowpay-auth-card {
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(100, 116, 139, 0.2);
+    color: rgb(248, 250, 252);
+  }
+  
+  .form-input {
+    background: rgba(51, 65, 85, 0.5);
+    border-color: rgb(100, 116, 139);
+    color: rgb(248, 250, 252);
+    
+    &::placeholder {
+      color: rgb(148, 163, 184);
+    }
+  }
+}
+
+// Animation definitions
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Security-focused animations
+.secure-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.secure-slide-in {
+  animation: slideInUp 0.4s ease-out;
+}
+
+// Print styles (security: hide sensitive content)
+@media print {
+  .no-print,
+  .secure-content,
+  .password-input,
+  .auth-form {
+    display: none !important;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .flowpay-auth-card {
+    border: 2px solid #000;
+  }
+  
+  .form-input {
+    border: 2px solid #000;
+  }
+  
+  .primary-button,
+  .success-button {
+    border: 2px solid #000;
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .flowpay-auth-page::before,
+  .flowpay-auth-page::after {
+    animation: none;
+  }
+}

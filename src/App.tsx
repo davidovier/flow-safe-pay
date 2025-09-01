@@ -7,6 +7,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import '@/lib/i18n';
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { useEffect } from "react";
+import { initXSSProtection } from "@/utils/security/xssProtection";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
@@ -34,15 +36,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <SubscriptionProvider>
-          <BrowserRouter>
-          <Routes>
+const App = () => {
+  // Initialize security protections
+  useEffect(() => {
+    initXSSProtection();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <SubscriptionProvider>
+            <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
@@ -169,6 +177,7 @@ const App = () => (
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
