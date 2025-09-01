@@ -44,9 +44,10 @@ interface Creator {
 
 interface CreateDealFormProps {
   onSuccess: () => void;
+  selectedCreatorId?: string;
 }
 
-export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
+export function CreateDealForm({ onSuccess, selectedCreatorId }: CreateDealFormProps) {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -78,7 +79,15 @@ export function CreateDealForm({ onSuccess }: CreateDealFormProps) {
   useEffect(() => {
     fetchProjects();
     fetchCreators();
-  }, []);
+    
+    // If selectedCreatorId is provided, find and set the creator
+    if (selectedCreatorId) {
+      const preSelectedCreator = creators.find(c => c.id === selectedCreatorId);
+      if (preSelectedCreator) {
+        form.setValue('creator_email', preSelectedCreator.email);
+      }
+    }
+  }, [selectedCreatorId, creators]);
 
   const fetchProjects = async () => {
     if (!userProfile) return;

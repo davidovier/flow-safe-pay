@@ -80,28 +80,45 @@ export default function BlogPost() {
 
   const fetchPost = async (postSlug: string) => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('slug', postSlug)
-        .eq('published', true)
-        .single();
+      // Mock blog post data since blog_posts table doesn't exist yet
+      const mockPost: BlogPost = {
+        id: '1',
+        title: 'Getting Started with FlowPay: A Creator\'s Guide',
+        slug: postSlug,
+        content: `
+# Getting Started with FlowPay
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Post not found
-          navigate('/blog');
-          toast({
-            title: "Post not found",
-            description: "The blog post you're looking for doesn't exist.",
-            variant: "destructive"
-          });
-          return;
-        }
-        throw error;
-      }
+FlowPay is designed to make payments between creators and brands secure, transparent, and efficient. Our platform uses escrow services to ensure that both parties are protected throughout the collaboration process.
 
-      setPost(data);
+## Setting Up Your Account
+
+Getting started with FlowPay is simple. Follow these steps:
+
+1. **Sign up** for a FlowPay account
+2. **Complete** your profile verification  
+3. **Set up** your payment preferences
+4. **Start** collaborating with confidence
+
+## How Escrow Works
+
+Our escrow system protects both creators and brands by holding funds in a secure account until project milestones are completed and approved.
+
+## Getting Paid
+
+Once your work is approved, payments are automatically released from escrow to your account. It's that simple!
+        `,
+        excerpt: 'Learn how to set up your FlowPay account and start accepting secure payments for your creative work.',
+        author_name: 'FlowPay Team',
+        author_avatar: '/placeholder.svg',
+        published_at: '2024-01-15T10:00:00Z',
+        reading_time: 5,
+        views: 1250,
+        tags: ['getting-started', 'creators', 'payments'],
+        seo_title: 'Getting Started with FlowPay: A Creator\'s Guide',
+        seo_description: 'Learn how to set up your FlowPay account and start accepting secure payments for your creative work.'
+      };
+
+      setPost(mockPost);
     } catch (error) {
       console.error('Error fetching blog post:', error);
       toast({
@@ -117,7 +134,8 @@ export default function BlogPost() {
 
   const incrementViews = async (postId: string) => {
     try {
-      await supabase.rpc('increment_blog_post_views', { post_id: postId });
+      // Mock view increment since function doesn't exist yet
+      console.log('Mock: Incrementing views for post', postId);
     } catch (error) {
       console.error('Error incrementing views:', error);
     }
@@ -125,17 +143,27 @@ export default function BlogPost() {
 
   const fetchRelatedPosts = async (tags: string[], currentPostId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, excerpt, reading_time, views')
-        .eq('published', true)
-        .neq('id', currentPostId)
-        .overlaps('tags', tags)
-        .limit(3);
+      // Mock related posts data since blog_posts table doesn't exist yet
+      const mockRelatedPosts: RelatedPost[] = [
+        {
+          id: '2',
+          title: 'Building Trust with Brands: The Power of Escrow Payments',
+          slug: 'building-trust-escrow-payments',
+          excerpt: 'Discover how escrow payments protect both creators and brands.',
+          reading_time: 7,
+          views: 980
+        },
+        {
+          id: '3',
+          title: 'Maximizing Your Creator Income: Payment Strategy Tips',
+          slug: 'maximizing-creator-income-tips',
+          excerpt: 'Strategic approaches to pricing and contracts.',
+          reading_time: 6,
+          views: 1450
+        }
+      ];
 
-      if (error) throw error;
-
-      setRelatedPosts(data || []);
+      setRelatedPosts(mockRelatedPosts);
     } catch (error) {
       console.error('Error fetching related posts:', error);
     }

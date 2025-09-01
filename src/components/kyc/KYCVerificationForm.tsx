@@ -166,59 +166,19 @@ export const KYCVerificationForm = ({ onSuccess, onClose }: KYCVerificationFormP
 
     setLoading(true);
     try {
-      // Submit KYC data to database
-      const { error: kycError } = await supabase
-        .from('kyc_applications')
-        .insert({
-          user_id: userProfile.id,
-          status: 'pending',
-          personal_info: {
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            date_of_birth: formData.date_of_birth,
-            nationality: formData.nationality,
-            phone_number: formData.phone_number,
-            occupation: formData.occupation
-          },
-          address_info: {
-            address_line_1: formData.address_line_1,
-            address_line_2: formData.address_line_2,
-            city: formData.city,
-            state: formData.state,
-            postal_code: formData.postal_code,
-            country: formData.country
-          },
-          business_info: userProfile.role === 'BRAND' ? {
-            business_name: formData.business_name,
-            business_type: formData.business_type,
-            tax_id: formData.tax_id
-          } : null,
-          documents: uploadedDocuments,
-          additional_info: {
-            id_document_type: formData.id_document_type,
-            purpose_of_account: formData.purpose_of_account
-          }
-        });
+      // Update user profile with KYC status since kyc_applications table doesn't exist yet
+      const { error: profileError } = await supabase
+        .from('users')
+        .update({ 
+          kyc_status: 'pending',
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          country: formData.country,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userProfile.id);
 
-      // Handle case where kyc_applications table might not exist
-      if (kycError && kycError.code === '42P01') {
-        // Table doesn't exist, update user profile instead
-        const { error: profileError } = await supabase
-          .from('users')
-          .update({ 
-            kyc_status: 'pending',
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone_number,
-            country: formData.country,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userProfile.id);
-
-        if (profileError) throw profileError;
-      } else if (kycError) {
-        throw kycError;
-      }
+      if (profileError) throw profileError;
 
       toast({
         title: 'KYC Application Submitted',

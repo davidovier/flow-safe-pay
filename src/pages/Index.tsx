@@ -6,11 +6,11 @@ import Dashboard from './Dashboard';
 import { AppLayout } from '@/components/layout/AppLayout';
 
 const Index = () => {
-  const { userProfile, isLoading } = useAuth();
+  const { userProfile, loading } = useAuth();
   const navigate = useNavigate();
 
   // If user is authenticated, show dashboard in app layout
-  if (!isLoading && userProfile) {
+  if (!loading && userProfile) {
     return (
       <AppLayout>
         <Dashboard />
@@ -19,7 +19,7 @@ const Index = () => {
   }
 
   // If user is not authenticated, show landing page
-  if (!isLoading && !userProfile) {
+  if (!loading && !userProfile) {
     return <Landing />;
   }
 

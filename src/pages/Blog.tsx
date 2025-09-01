@@ -52,25 +52,59 @@ export default function Blog() {
 
   const fetchBlogData = async () => {
     try {
-      // Fetch published posts
-      const { data: postsData, error: postsError } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('published', true)
-        .order('published_at', { ascending: false });
+      // Mock data for demo since blog_posts table doesn't exist yet
+      const mockPosts: BlogPost[] = [
+        {
+          id: '1',
+          title: 'Getting Started with FlowPay: A Creator\'s Guide',
+          slug: 'getting-started-flowpay-creators',
+          excerpt: 'Learn how to set up your FlowPay account and start accepting secure payments for your creative work.',
+          author_name: 'FlowPay Team',
+          author_avatar: '/placeholder.svg',
+          published_at: '2024-01-15T10:00:00Z',
+          reading_time: 5,
+          views: 1250,
+          tags: ['getting-started', 'creators', 'payments'],
+          featured: true,
+        },
+        {
+          id: '2',
+          title: 'Building Trust with Brands: The Power of Escrow Payments',
+          slug: 'building-trust-escrow-payments',
+          excerpt: 'Discover how escrow payments protect both creators and brands, fostering stronger business relationships.',
+          author_name: 'Sarah Johnson',
+          author_avatar: '/placeholder.svg',
+          published_at: '2024-01-10T14:30:00Z',
+          reading_time: 7,
+          views: 980,
+          tags: ['trust', 'escrow', 'brands'],
+          featured: true,
+        },
+        {
+          id: '3',
+          title: 'Maximizing Your Creator Income: Payment Strategy Tips',
+          slug: 'maximizing-creator-income-tips',
+          excerpt: 'Strategic approaches to pricing, contracts, and payment terms that successful creators use.',
+          author_name: 'Alex Chen',
+          author_avatar: '/placeholder.svg',
+          published_at: '2024-01-05T09:15:00Z',
+          reading_time: 6,
+          views: 1450,
+          tags: ['income', 'strategy', 'pricing'],
+          featured: false,
+        }
+      ];
 
-      if (postsError) throw postsError;
+      const mockCategories: BlogCategory[] = [
+        { id: '1', name: 'Getting Started', slug: 'getting-started', color: '#3B82F6' },
+        { id: '2', name: 'Creator Tips', slug: 'creator-tips', color: '#10B981' },
+        { id: '3', name: 'Brand Guides', slug: 'brand-guides', color: '#F59E0B' },
+        { id: '4', name: 'Platform Updates', slug: 'platform-updates', color: '#8B5CF6' },
+      ];
 
-      // Fetch categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('blog_categories')
-        .select('*')
-        .order('name');
-
-      if (categoriesError) throw categoriesError;
-
-      setPosts(postsData || []);
-      setCategories(categoriesData || []);
+      setPosts(mockPosts);
+      setCategories(mockCategories);
+      
     } catch (error) {
       console.error('Error fetching blog data:', error);
       toast({

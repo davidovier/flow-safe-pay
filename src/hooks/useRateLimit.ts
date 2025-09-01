@@ -41,9 +41,9 @@ export function useRateLimit(
     const userAgent = navigator.userAgent;
     const language = navigator.language;
     const platform = navigator.platform;
-    const screen = `${screen.width}x${screen.height}`;
+    const screenRes = `${window.screen.width}x${window.screen.height}`;
     
-    return btoa(`${userAgent}:${language}:${platform}:${screen}`).substring(0, 20);
+    return btoa(`${userAgent}:${language}:${platform}:${screenRes}`).substring(0, 20);
   }, [identifier]);
 
   // Check if request is allowed

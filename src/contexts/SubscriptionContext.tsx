@@ -245,10 +245,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     return {
       deals: plan.limits.dealsPerMonth === -1 
-        ? 'unlimited' 
+        ? 'unlimited' as const
         : Math.max(0, plan.limits.dealsPerMonth - usage.usage.dealsCreated),
       transactionVolume: plan.limits.transactionVolume === -1 
-        ? 'unlimited' 
+        ? 'unlimited' as const
         : Math.max(0, plan.limits.transactionVolume - usage.usage.transactionVolume),
     };
   };

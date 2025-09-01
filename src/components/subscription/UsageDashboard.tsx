@@ -176,28 +176,32 @@ export function UsageDashboard() {
             </div>
             
             <div className="flex items-center space-x-2">
-              <Badge variant={currentPlan.limits.customBranding ? "success" : "secondary"}>
+              <Badge variant={currentPlan.limits.customBranding ? "default" : "secondary"} 
+                     className={currentPlan.limits.customBranding ? "bg-green-100 text-green-800" : ""}>
                 {currentPlan.limits.customBranding ? '✓' : '✗'}
               </Badge>
               <span className="text-sm">Custom branding</span>
             </div>
             
             <div className="flex items-center space-x-2">
-              <Badge variant={currentPlan.limits.apiAccess ? "success" : "secondary"}>
+              <Badge variant={currentPlan.limits.apiAccess ? "default" : "secondary"}
+                     className={currentPlan.limits.apiAccess ? "bg-green-100 text-green-800" : ""}>
                 {currentPlan.limits.apiAccess ? '✓' : '✗'}
               </Badge>
               <span className="text-sm">API access</span>
             </div>
             
             <div className="flex items-center space-x-2">
-              <Badge variant={currentPlan.limits.advancedAnalytics ? "success" : "secondary"}>
+              <Badge variant={currentPlan.limits.advancedAnalytics ? "default" : "secondary"}
+                     className={currentPlan.limits.advancedAnalytics ? "bg-green-100 text-green-800" : ""}>
                 {currentPlan.limits.advancedAnalytics ? '✓' : '✗'}
               </Badge>
               <span className="text-sm">Advanced analytics</span>
             </div>
             
             <div className="flex items-center space-x-2">
-              <Badge variant={currentPlan.limits.bulkPayouts ? "success" : "secondary"}>
+              <Badge variant={currentPlan.limits.bulkPayouts ? "default" : "secondary"}
+                     className={currentPlan.limits.bulkPayouts ? "bg-green-100 text-green-800" : ""}>
                 {currentPlan.limits.bulkPayouts ? '✓' : '✗'}
               </Badge>
               <span className="text-sm">Bulk payouts</span>

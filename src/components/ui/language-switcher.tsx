@@ -19,10 +19,10 @@ const languages = [
 
 interface LanguageSwitcherProps {
   variant?: 'default' | 'minimal';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'default' | 'lg';
 }
 
-export function LanguageSwitcher({ variant = 'default', size = 'md' }: LanguageSwitcherProps) {
+export function LanguageSwitcher({ variant = 'default', size = 'default' }: LanguageSwitcherProps) {
   const { i18n } = useTranslation();
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 

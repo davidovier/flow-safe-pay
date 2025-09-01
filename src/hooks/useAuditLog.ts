@@ -51,8 +51,9 @@ export function useAuditLog() {
     resource: string,
     details: Record<string, any> = {}
   ) => {
-    logDataAccess(type, resource, user?.id, {
+    logDataAccess(type, resource, {
       ...details,
+      user_id: user?.id,
       user_role: user?.role,
       timestamp: new Date().toISOString()
     });
