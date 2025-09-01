@@ -63,15 +63,15 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">
-          {mode === 'signin' ? t('welcomeBack') : t('joinFlowPay')}
+    <Card className="w-full max-w-md mx-auto shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="text-center pb-4">
+        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+          {mode === 'signin' ? 'Welcome Back!' : 'Join FlowPay Today'}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-gray-600">
           {mode === 'signin' 
-            ? t('signInToAccount')
-            : t('createAccount')
+            ? 'Sign in to access your secure creator workspace'
+            : 'Start earning with instant, secure payments'
           }
         </CardDescription>
       </CardHeader>
@@ -81,71 +81,78 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">{t('firstName')}</Label>
+                  <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">First Name</Label>
                   <Input
                     id="firstName"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
+                    className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                    placeholder="Enter your first name"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">{t('lastName')}</Label>
+                  <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">Last Name</Label>
                   <Input
                     id="lastName"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
+                    className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                    placeholder="Enter your last name"
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">{t('iAmA')}</Label>
+                <Label htmlFor="role" className="text-sm font-medium text-gray-700">I am a...</Label>
                 <Select value={role} onValueChange={(value: UserRole) => setRole(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CREATOR">{t('creator')}</SelectItem>
-                    <SelectItem value="BRAND">{t('brand')}</SelectItem>
+                    <SelectItem value="CREATOR">🎨 Creator - I create content and earn</SelectItem>
+                    <SelectItem value="BRAND">🏢 Brand - I hire creators for campaigns</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">{t('email')}</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+              placeholder="Enter your email address"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">{t('password')}</Label>
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className={`h-12 pr-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl ${mode === 'signup' && password && !isPasswordValid ? "border-red-300 focus:border-red-500 focus:ring-red-500" : ""}`}
+                placeholder={mode === 'signin' ? "Enter your password" : "Create a strong password"}
                 required
                 minLength={mode === 'signin' ? 6 : 8}
-                className={mode === 'signup' && password && !isPasswordValid ? "border-destructive" : ""}
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 rounded-lg"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  <EyeOff className="h-4 w-4 text-gray-500" />
                 ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <Eye className="h-4 w-4 text-gray-500" />
                 )}
               </Button>
             </div>
@@ -191,25 +198,49 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={loading || !canSubmit}>
+        <CardFooter className="flex flex-col space-y-4 pt-6">
+          <Button 
+            type="submit" 
+            className={`w-full h-12 text-base font-semibold rounded-xl shadow-lg transition-all duration-200 ${
+              mode === 'signin' 
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:scale-[1.02]' 
+                : 'bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 transform hover:scale-[1.02]'
+            }`}
+            disabled={loading || !canSubmit}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === 'signin' ? t('signIn') : t('createAccount')}
+            {mode === 'signin' 
+              ? '🚀 Sign In & Start Earning' 
+              : '✨ Create Account & Get Started'
+            }
           </Button>
+          
           {mode === 'signup' && !canSubmit && (firstName || lastName || email || password) && (
-            <p className="text-xs text-muted-foreground text-center">
-              {t('completeAllFields')}
-            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+              <p className="text-sm text-blue-700 font-medium">
+                📝 Complete all fields to create your account
+              </p>
+            </div>
           )}
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">or</span>
+            </div>
+          </div>
+          
           <Button
             type="button"
             variant="ghost"
             onClick={onToggleMode}
-            className="w-full"
+            className="w-full h-12 text-base font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200"
           >
             {mode === 'signin' 
-              ? t('noAccountSignUp')
-              : t('hasAccountSignIn')
+              ? "New to FlowPay? Create your account →"
+              : "Already have an account? Sign in →"
             }
           </Button>
         </CardFooter>
