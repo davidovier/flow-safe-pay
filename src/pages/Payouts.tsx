@@ -81,6 +81,19 @@ export default function Payouts() {
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+  
+  // Payment method management states
+  const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState(false);
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [paymentMethodLoading, setPaymentMethodLoading] = useState(false);
+  
+  // Payment method form data
+  const [paymentMethodForm, setPaymentMethodForm] = useState({
+    type: 'bank_transfer' as 'bank_transfer' | 'paypal' | 'stripe',
+    name: '',
+    details: {} as any,
+    is_default: false
+  });
 
   useEffect(() => {
     if (userProfile?.role === 'CREATOR') {
@@ -291,6 +304,165 @@ export default function Payouts() {
       });
     } finally {
       setPayoutLoading(false);
+    }
+  };
+
+  const handleAddPaymentMethod = () => {
+    setEditingPaymentMethod(null);
+    setPaymentMethodForm({
+      type: 'bank_transfer',
+      name: '',
+      details: {},
+      is_default: false
+    });
+    setIsPaymentMethodModalOpen(true);
+  };
+
+  const handleEditPaymentMethod = (method: PaymentMethod) => {
+    setEditingPaymentMethod(method);
+    setPaymentMethodForm({
+      type: method.type,
+      name: method.name,
+      details: method.details || {},
+      is_default: method.is_default
+    });
+    setIsPaymentMethodModalOpen(true);
+  };
+
+  const handleSavePaymentMethod = async () => {
+    if (!userProfile) return;
+
+    // Validation
+    if (!paymentMethodForm.name.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a name for this payment method.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Type-specific validation
+    if (paymentMethodForm.type === 'bank_transfer') {
+      if (!paymentMethodForm.details.account_number || !paymentMethodForm.details.routing_number) {
+        toast({
+          title: "Bank Details Required",
+          description: "Please enter account number and routing number.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else if (paymentMethodForm.type === 'paypal') {
+      if (!paymentMethodForm.details.email) {
+        toast({
+          title: "PayPal Email Required",
+          description: "Please enter your PayPal email address.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else if (paymentMethodForm.type === 'stripe') {
+      if (!paymentMethodForm.details.last4) {
+        toast({
+          title: "Card Details Required",
+          description: "Please enter card information.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    setPaymentMethodLoading(true);
+    try {
+      if (editingPaymentMethod) {
+        // Update existing payment method
+        const { error } = await supabase
+          .from('payment_methods')
+          .update({
+            name: paymentMethodForm.name,
+            details: paymentMethodForm.details,
+            is_default: paymentMethodForm.is_default,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingPaymentMethod.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Payment Method Updated! ✅",
+          description: "Your payment method has been updated successfully.",
+        });
+      } else {
+        // Create new payment method
+        const { error } = await supabase
+          .from('payment_methods')
+          .insert({
+            user_id: userProfile.id,
+            type: paymentMethodForm.type,
+            name: paymentMethodForm.name,
+            details: paymentMethodForm.details,
+            is_default: paymentMethodForm.is_default,
+            is_verified: false // New payment methods need verification
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Payment Method Added! 🎉",
+          description: "Your payment method has been added successfully.",
+        });
+      }
+
+      // Refresh data and close modal
+      await fetchPayoutData();
+      setIsPaymentMethodModalOpen(false);
+      setEditingPaymentMethod(null);
+
+    } catch (error: any) {
+      console.error('Error saving payment method:', error);
+      
+      if (error.code === 'PGRST301' || error.message?.includes('does not exist')) {
+        toast({
+          title: "Feature Not Available",
+          description: "Payment method management is not yet fully configured.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Save Failed",
+          description: error.message || "Failed to save payment method. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setPaymentMethodLoading(false);
+    }
+  };
+
+  const handleDeletePaymentMethod = async (methodId: string) => {
+    if (!confirm('Are you sure you want to delete this payment method?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .delete()
+        .eq('id', methodId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Method Deleted",
+        description: "The payment method has been removed.",
+      });
+
+      await fetchPayoutData();
+    } catch (error: any) {
+      console.error('Error deleting payment method:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete payment method. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -643,19 +815,206 @@ export default function Payouts() {
                     <Badge variant="secondary" className="ml-2">Default</Badge>
                   )}
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => handleEditPaymentMethod(method)}>
                   Edit
                 </Button>
               </CardContent>
             </Card>
             ))
           )}
-          <Button variant="outline" className="h-16 border-dashed">
+          <Button variant="outline" className="h-16 border-dashed" onClick={handleAddPaymentMethod}>
             <Plus className="h-4 w-4 mr-2" />
             Add Payment Method
           </Button>
         </div>
       </div>
+
+      {/* Payment Method Management Modal */}
+      <Dialog open={isPaymentMethodModalOpen} onOpenChange={setIsPaymentMethodModalOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPaymentMethod ? 'Edit Payment Method' : 'Add Payment Method'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment-type">Payment Type</Label>
+              <Select 
+                value={paymentMethodForm.type} 
+                onValueChange={(value: 'bank_transfer' | 'paypal' | 'stripe') => 
+                  setPaymentMethodForm({ ...paymentMethodForm, type: value, details: {} })
+                }
+                disabled={paymentMethodLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
+                  <SelectItem value="stripe">Debit Card</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-name">Display Name*</Label>
+              <Input
+                id="payment-name"
+                value={paymentMethodForm.name}
+                onChange={(e) => setPaymentMethodForm({ ...paymentMethodForm, name: e.target.value })}
+                placeholder="e.g., My Primary Bank Account"
+                disabled={paymentMethodLoading}
+              />
+            </div>
+
+            {/* Bank Transfer Fields */}
+            {paymentMethodForm.type === 'bank_transfer' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="account-number">Account Number*</Label>
+                  <Input
+                    id="account-number"
+                    value={paymentMethodForm.details.account_number || ''}
+                    onChange={(e) => setPaymentMethodForm({
+                      ...paymentMethodForm,
+                      details: { ...paymentMethodForm.details, account_number: e.target.value }
+                    })}
+                    placeholder="Enter account number"
+                    disabled={paymentMethodLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="routing-number">Routing Number*</Label>
+                  <Input
+                    id="routing-number"
+                    value={paymentMethodForm.details.routing_number || ''}
+                    onChange={(e) => setPaymentMethodForm({
+                      ...paymentMethodForm,
+                      details: { ...paymentMethodForm.details, routing_number: e.target.value }
+                    })}
+                    placeholder="Enter routing number"
+                    disabled={paymentMethodLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="account-type">Account Type</Label>
+                  <Select 
+                    value={paymentMethodForm.details.account_type || 'checking'} 
+                    onValueChange={(value) => setPaymentMethodForm({
+                      ...paymentMethodForm,
+                      details: { ...paymentMethodForm.details, account_type: value }
+                    })}
+                    disabled={paymentMethodLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* PayPal Fields */}
+            {paymentMethodForm.type === 'paypal' && (
+              <div className="space-y-2">
+                <Label htmlFor="paypal-email">PayPal Email*</Label>
+                <Input
+                  id="paypal-email"
+                  type="email"
+                  value={paymentMethodForm.details.email || ''}
+                  onChange={(e) => setPaymentMethodForm({
+                    ...paymentMethodForm,
+                    details: { ...paymentMethodForm.details, email: e.target.value }
+                  })}
+                  placeholder="your.email@example.com"
+                  disabled={paymentMethodLoading}
+                />
+              </div>
+            )}
+
+            {/* Stripe Card Fields */}
+            {paymentMethodForm.type === 'stripe' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="card-last4">Last 4 Digits*</Label>
+                  <Input
+                    id="card-last4"
+                    value={paymentMethodForm.details.last4 || ''}
+                    onChange={(e) => setPaymentMethodForm({
+                      ...paymentMethodForm,
+                      details: { ...paymentMethodForm.details, last4: e.target.value }
+                    })}
+                    placeholder="1234"
+                    maxLength={4}
+                    disabled={paymentMethodLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="card-brand">Card Brand</Label>
+                  <Select 
+                    value={paymentMethodForm.details.brand || 'visa'} 
+                    onValueChange={(value) => setPaymentMethodForm({
+                      ...paymentMethodForm,
+                      details: { ...paymentMethodForm.details, brand: value }
+                    })}
+                    disabled={paymentMethodLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="visa">Visa</SelectItem>
+                      <SelectItem value="mastercard">Mastercard</SelectItem>
+                      <SelectItem value="amex">American Express</SelectItem>
+                      <SelectItem value="discover">Discover</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is-default"
+                checked={paymentMethodForm.is_default}
+                onChange={(e) => setPaymentMethodForm({ ...paymentMethodForm, is_default: e.target.checked })}
+                disabled={paymentMethodLoading}
+                className="rounded"
+              />
+              <Label htmlFor="is-default">Make this my default payment method</Label>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsPaymentMethodModalOpen(false)}
+                disabled={paymentMethodLoading}
+              >
+                Cancel
+              </Button>
+              {editingPaymentMethod && (
+                <Button 
+                  variant="destructive"
+                  onClick={() => handleDeletePaymentMethod(editingPaymentMethod.id)}
+                  disabled={paymentMethodLoading}
+                >
+                  Delete
+                </Button>
+              )}
+              <Button onClick={handleSavePaymentMethod} disabled={paymentMethodLoading}>
+                {paymentMethodLoading ? 'Saving...' : (editingPaymentMethod ? 'Update' : 'Add')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

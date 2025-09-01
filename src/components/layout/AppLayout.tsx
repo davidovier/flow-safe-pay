@@ -33,6 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (userProfile.role === 'BRAND') {
       return [
         ...baseItems,
+        { icon: Users, label: 'Creators', path: '/creators' },
         { icon: FolderOpen, label: 'Projects', path: '/projects' },
         { icon: Handshake, label: 'Deals', path: '/deals' },
         { icon: CreditCard, label: 'Payments', path: '/payments' },

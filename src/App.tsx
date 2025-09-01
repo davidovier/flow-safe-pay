@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/brand/Projects";
 import NewProject from "./pages/brand/NewProject";
+import ProjectDetail from "./pages/brand/ProjectDetail";
 import Deals from "./pages/Deals";
 import Deliverables from "./pages/Deliverables";
 import Payouts from "./pages/Payouts";
@@ -23,6 +24,8 @@ import AdminUsers from "./pages/admin/Users";
 import AdminDeals from "./pages/admin/Deals";
 import AdminTransactions from "./pages/admin/Transactions";
 import Settings from "./pages/Settings";
+import Creators from "./pages/Creators";
+import DealDetail from "./pages/DealDetail";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import NotFound from "./pages/NotFound";
@@ -58,6 +61,13 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/creators" element={
+              <ProtectedRoute allowedRoles={['BRAND']}>
+                <AppLayout>
+                  <Creators />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/projects" element={
               <ProtectedRoute allowedRoles={['BRAND']}>
                 <AppLayout>
@@ -72,10 +82,24 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/projects/:id" element={
+              <ProtectedRoute allowedRoles={['BRAND']}>
+                <AppLayout>
+                  <ProjectDetail />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/deals" element={
               <ProtectedRoute allowedRoles={['CREATOR', 'BRAND']}>
                 <AppLayout>
                   <Deals />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/deals/:id" element={
+              <ProtectedRoute allowedRoles={['CREATOR', 'BRAND']}>
+                <AppLayout>
+                  <DealDetail />
                 </AppLayout>
               </ProtectedRoute>
             } />

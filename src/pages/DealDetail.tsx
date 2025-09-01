@@ -1,0 +1,664 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  User,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Upload,
+  MessageSquare,
+  FileText,
+  Shield,
+  TrendingUp,
+  Eye,
+  Download,
+  Edit
+} from 'lucide-react';
+
+interface Deal {
+  id: string;
+  project_id: string;
+  creator_id: string | null;
+  currency: string;
+  amount_total: number;
+  escrow_id: string | null;
+  state: 'DRAFT' | 'FUNDED' | 'RELEASED' | 'DISPUTED' | 'REFUNDED';
+  created_at: string;
+  updated_at: string;
+  projects: {
+    id: string;
+    title: string;
+    description: string | null;
+    users: {
+      id: string;
+      email: string;
+      first_name: string | null;
+      last_name: string | null;
+    };
+  };
+  users: {
+    id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+  milestones: Array<{
+    id: string;
+    title: string;
+    amount: number;
+    state: 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'RELEASED' | 'DISPUTED';
+    due_at: string | null;
+    created_at: string;
+    deliverables?: Array<{
+      id: string;
+      title: string;
+      description: string;
+      status: string;
+      submitted_at: string | null;
+      submission_url: string | null;
+      file_name: string | null;
+      feedback: string | null;
+    }>;
+  }>;
+}
+
+interface MilestoneReviewData {
+  milestoneId: string;
+  action: 'approve' | 'reject' | 'request_revision';
+  feedback: string;
+}
+
+export default function DealDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  // State management
+  const [deal, setDeal] = useState<Deal | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  
+  // Review modal state
+  const [reviewData, setReviewData] = useState<MilestoneReviewData>({
+    milestoneId: '',
+    action: 'approve',
+    feedback: ''
+  });
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      fetchDealDetails();
+    }
+  }, [id]);
+
+  const fetchDealDetails = async () => {
+    if (!id || !userProfile) return;
+    
+    setLoading(true);
+    try {
+      // Fetch deal with all related data
+      const { data: dealData, error: dealError } = await supabase
+        .from('deals')
+        .select(`
+          *,
+          projects!inner (
+            id, title, description,
+            users!brand_id (
+              id, email, first_name, last_name
+            )
+          ),
+          users (
+            id, email, first_name, last_name
+          ),
+          milestones (
+            id, title, amount, state, due_at, created_at
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (dealError) {
+        console.error('Error fetching deal:', dealError);
+        if (dealError.code === 'PGRST116') {
+          toast({
+            title: "Deal Not Found",
+            description: "The requested deal could not be found.",
+            variant: "destructive"
+          });
+          navigate('/deals');
+          return;
+        }
+        throw dealError;
+      }
+
+      // Check if user has access to this deal
+      const hasAccess = 
+        userProfile.role === 'ADMIN' ||
+        (userProfile.role === 'BRAND' && dealData.projects.users.id === userProfile.id) ||
+        (userProfile.role === 'CREATOR' && dealData.creator_id === userProfile.id);
+
+      if (!hasAccess) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to view this deal.",
+          variant: "destructive"
+        });
+        navigate('/deals');
+        return;
+      }
+
+      // Fetch deliverables for each milestone if they exist
+      const milestonesWithDeliverables = await Promise.all(
+        (dealData.milestones || []).map(async (milestone) => {
+          try {
+            const { data: deliverables } = await supabase
+              .from('deliverables')
+              .select('*')
+              .eq('milestone_id', milestone.id);
+            
+            return {
+              ...milestone,
+              deliverables: deliverables || []
+            };
+          } catch (error) {
+            console.warn('Could not fetch deliverables for milestone:', milestone.id);
+            return {
+              ...milestone,
+              deliverables: []
+            };
+          }
+        })
+      );
+
+      setDeal({
+        ...dealData,
+        milestones: milestonesWithDeliverables
+      });
+
+    } catch (error) {
+      console.error('Error fetching deal details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load deal details. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMilestoneReview = async () => {
+    if (!reviewData.milestoneId || !userProfile) return;
+
+    setReviewLoading(true);
+    try {
+      // Find the deliverable for this milestone
+      const milestone = deal?.milestones.find(m => m.id === reviewData.milestoneId);
+      const deliverable = milestone?.deliverables?.[0];
+
+      if (!deliverable) {
+        toast({
+          title: "No Deliverable Found",
+          description: "No deliverable found for this milestone.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Use the review_deliverable function if available
+      const { error } = await supabase.rpc('review_deliverable', {
+        deliverable_uuid: deliverable.id,
+        action: reviewData.action,
+        feedback_text: reviewData.feedback || null
+      });
+
+      if (error) {
+        // If function doesn't exist, fall back to direct database update
+        if (error.code === 'PGRST202' || error.message?.includes('function')) {
+          const status = reviewData.action === 'approve' ? 'approved' : 
+                        reviewData.action === 'reject' ? 'rejected' : 'revision_requested';
+          
+          const { error: updateError } = await supabase
+            .from('deliverables')
+            .update({
+              status: status,
+              feedback: reviewData.feedback,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', deliverable.id);
+
+          if (updateError) throw updateError;
+
+          // Update milestone state
+          const milestoneState = reviewData.action === 'approve' ? 'APPROVED' : 'SUBMITTED';
+          await supabase
+            .from('milestones')
+            .update({ state: milestoneState })
+            .eq('id', reviewData.milestoneId);
+        } else {
+          throw error;
+        }
+      }
+
+      toast({
+        title: "Review Submitted! ✅",
+        description: `Milestone ${reviewData.action}d successfully.`,
+      });
+
+      // Refresh deal data
+      await fetchDealDetails();
+      setIsReviewModalOpen(false);
+      setReviewData({ milestoneId: '', action: 'approve', feedback: '' });
+
+    } catch (error: any) {
+      console.error('Error reviewing milestone:', error);
+      toast({
+        title: "Review Failed",
+        description: error.message || "Failed to submit review. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const getStateColor = (state: string) => {
+    switch (state) {
+      case 'DRAFT': return 'secondary';
+      case 'FUNDED': return 'default';
+      case 'RELEASED': return 'success';
+      case 'DISPUTED': return 'warning';
+      case 'REFUNDED': return 'destructive';
+      default: return 'secondary';
+    }
+  };
+
+  const getMilestoneStateIcon = (state: string) => {
+    switch (state) {
+      case 'PENDING': return <Clock className="h-4 w-4" />;
+      case 'SUBMITTED': return <Upload className="h-4 w-4" />;
+      case 'APPROVED': return <CheckCircle className="h-4 w-4" />;
+      case 'RELEASED': return <CheckCircle className="h-4 w-4" />;
+      case 'DISPUTED': return <AlertCircle className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const getMilestoneProgress = () => {
+    if (!deal?.milestones) return 0;
+    const completed = deal.milestones.filter(m => m.state === 'RELEASED').length;
+    return (completed / deal.milestones.length) * 100;
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `$${(amount / 100).toFixed(2)}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <div className="h-8 w-8 bg-muted rounded"></div>
+          <div className="h-8 bg-muted rounded w-48"></div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 bg-muted rounded animate-pulse"></div>
+          ))}
+        </div>
+        <div className="h-96 bg-muted rounded animate-pulse"></div>
+      </div>
+    );
+  }
+
+  if (!deal) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Deal not found.</p>
+      </div>
+    );
+  }
+
+  const canReviewMilestones = userProfile?.role === 'BRAND' && 
+                              deal.projects.users.id === userProfile.id;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/deals')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Deals
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{deal.projects.title}</h1>
+            <p className="text-muted-foreground">Deal #{deal.id.slice(-8)}</p>
+          </div>
+        </div>
+        <Badge variant={getStateColor(deal.state) as any} className="text-sm">
+          {deal.state}
+        </Badge>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(deal.amount_total)}</div>
+            <p className="text-xs text-muted-foreground">
+              {deal.currency.toUpperCase()}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Progress</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{getMilestoneProgress().toFixed(0)}%</div>
+            <Progress value={getMilestoneProgress()} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Creator</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-medium">
+              {deal.users ? 
+                `${deal.users.first_name || ''} ${deal.users.last_name || ''}`.trim() || deal.users.email :
+                'Not Assigned'
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {deal.users?.email}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-medium">
+              {deal.escrow_id ? 'Escrowed' : 'Not Funded'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Created {formatDate(deal.created_at)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs defaultValue="milestones" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="milestones">Milestones</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="communication">Messages</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="milestones" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Milestones</h2>
+            <Badge variant="outline">
+              {deal.milestones.length} milestone{deal.milestones.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+
+          <div className="space-y-4">
+            {deal.milestones.map((milestone, index) => (
+              <Card key={milestone.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">
+                        {index + 1}. {milestone.title}
+                      </CardTitle>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        <span>{formatCurrency(milestone.amount)}</span>
+                        {milestone.due_at && (
+                          <>
+                            <span>•</span>
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>Due {formatDate(milestone.due_at)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant={getStateColor(milestone.state) as any} className="flex items-center gap-1">
+                      {getMilestoneStateIcon(milestone.state)}
+                      {milestone.state}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Deliverables */}
+                  {milestone.deliverables && milestone.deliverables.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Deliverables</h4>
+                      {milestone.deliverables.map((deliverable) => (
+                        <div key={deliverable.id} className="border rounded-lg p-3">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <h5 className="font-medium">{deliverable.title}</h5>
+                              <p className="text-sm text-muted-foreground">{deliverable.description}</p>
+                              {deliverable.submitted_at && (
+                                <p className="text-xs text-muted-foreground">
+                                  Submitted {formatDate(deliverable.submitted_at)}
+                                </p>
+                              )}
+                              {deliverable.feedback && (
+                                <div className="mt-2 p-2 bg-muted rounded text-sm">
+                                  <strong>Feedback:</strong> {deliverable.feedback}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex space-x-2">
+                              {deliverable.submission_url && (
+                                <Button variant="ghost" size="sm" asChild>
+                                  <a href={deliverable.submission_url} target="_blank" rel="noopener noreferrer">
+                                    <Eye className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              )}
+                              {canReviewMilestones && milestone.state === 'SUBMITTED' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setReviewData({ ...reviewData, milestoneId: milestone.id });
+                                    setIsReviewModalOpen(true);
+                                  }}
+                                >
+                                  Review
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="mx-auto h-8 w-8 mb-2" />
+                      <p>No deliverables yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="details" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">Description</h3>
+                <p className="text-muted-foreground">
+                  {deal.projects.description || 'No description provided.'}
+                </p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Brand</h3>
+                  <p>{deal.projects.users.first_name} {deal.projects.users.last_name}</p>
+                  <p className="text-sm text-muted-foreground">{deal.projects.users.email}</p>
+                </div>
+                
+                {deal.users && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Creator</h3>
+                    <p>{deal.users.first_name} {deal.users.last_name}</p>
+                    <p className="text-sm text-muted-foreground">{deal.users.email}</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Deal Information</h3>
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Created:</span> {formatDate(deal.created_at)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Updated:</span> {formatDate(deal.updated_at)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Currency:</span> {deal.currency.toUpperCase()}
+                  </div>
+                  <div>
+                    <span className="font-medium">Escrow ID:</span> {deal.escrow_id || 'Not funded'}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="communication" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Communication</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <MessageSquare className="mx-auto h-16 w-16 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Messages Coming Soon</h3>
+                <p>Direct messaging between brands and creators will be available soon.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Review Modal */}
+      <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Milestone</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Label>Action</Label>
+              <div className="flex space-x-2">
+                {[
+                  { value: 'approve', label: 'Approve', variant: 'default' },
+                  { value: 'request_revision', label: 'Request Revision', variant: 'secondary' },
+                  { value: 'reject', label: 'Reject', variant: 'destructive' }
+                ].map(action => (
+                  <Button
+                    key={action.value}
+                    variant={reviewData.action === action.value ? action.variant as any : 'outline'}
+                    size="sm"
+                    onClick={() => setReviewData({ ...reviewData, action: action.value as any })}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="feedback">Feedback {reviewData.action !== 'approve' ? '*' : '(Optional)'}</Label>
+              <Textarea
+                id="feedback"
+                value={reviewData.feedback}
+                onChange={(e) => setReviewData({ ...reviewData, feedback: e.target.value })}
+                placeholder={
+                  reviewData.action === 'approve' 
+                    ? "Great work! (optional)" 
+                    : "Please explain what needs to be changed..."
+                }
+                rows={4}
+                disabled={reviewLoading}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsReviewModalOpen(false)}
+                disabled={reviewLoading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleMilestoneReview}
+                disabled={reviewLoading || (reviewData.action !== 'approve' && !reviewData.feedback.trim())}
+              >
+                {reviewLoading ? 'Submitting...' : 'Submit Review'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

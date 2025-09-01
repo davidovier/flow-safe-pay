@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ const stateColors = {
 export default function Deals() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -215,13 +217,7 @@ export default function Deals() {
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={() => {
-                      // TODO: Navigate to deal details page
-                      toast({
-                        title: 'Coming Soon',
-                        description: 'Deal details page is under development',
-                      });
-                    }}
+                    onClick={() => navigate(`/deals/${deal.id}`)}
                   >
                     View Details
                   </Button>
