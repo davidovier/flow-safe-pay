@@ -24,7 +24,9 @@ import AdminUsers from "./pages/admin/Users";
 import AdminDeals from "./pages/admin/Deals";
 import AdminTransactions from "./pages/admin/Transactions";
 import Settings from "./pages/Settings";
+import KYCStatus from "./pages/KYCStatus";
 import Creators from "./pages/Creators";
+import CreatorProfile from "./pages/CreatorProfile";
 import DealDetail from "./pages/DealDetail";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
@@ -61,10 +63,24 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/kyc-status" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <KYCStatus />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/creators" element={
               <ProtectedRoute allowedRoles={['BRAND']}>
                 <AppLayout>
                   <Creators />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/creators/:id" element={
+              <ProtectedRoute allowedRoles={['BRAND']}>
+                <AppLayout>
+                  <CreatorProfile />
                 </AppLayout>
               </ProtectedRoute>
             } />

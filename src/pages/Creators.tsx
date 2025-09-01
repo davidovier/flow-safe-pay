@@ -131,8 +131,7 @@ export default function Creators() {
   };
 
   const handleViewProfile = (creator: Creator) => {
-    setSelectedCreator(creator);
-    setIsProfileModalOpen(true);
+    navigate(`/creators/${creator.id}`);
   };
 
   const handleContactCreator = async (creator: Creator) => {

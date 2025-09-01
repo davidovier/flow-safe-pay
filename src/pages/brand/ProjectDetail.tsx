@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +29,8 @@ import {
   AlertCircle,
   Target,
   Settings,
-  Share2
+  Share2,
+  Loader2
 } from 'lucide-react';
 import { CreateDealForm } from '@/components/deals/CreateDealForm';
 
@@ -75,6 +80,13 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    status: 'active',
+  });
 
   useEffect(() => {
     if (id) {
@@ -138,6 +150,13 @@ export default function ProjectDetail() {
       }
 
       setProject(projectData);
+
+      // Initialize edit form data
+      setEditFormData({
+        title: projectData.title,
+        description: projectData.description || '',
+        status: projectData.status,
+      });
 
     } catch (error) {
       console.error('Error fetching project details:', error);
@@ -226,6 +245,47 @@ export default function ProjectDetail() {
     });
   };
 
+  const handleEditInputChange = (field: string, value: string) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project || !userProfile) return;
+
+    setEditLoading(true);
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          title: editFormData.title,
+          description: editFormData.description || null,
+          status: editFormData.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', project.id)
+        .eq('brand_id', userProfile.id); // Ensure user can only edit their own projects
+
+      if (error) throw error;
+
+      toast({
+        title: 'Project updated!',
+        description: 'Your project has been updated successfully.',
+      });
+
+      setIsEditProjectModalOpen(false);
+      fetchProjectDetails(); // Refresh project data
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error updating project',
+        description: error.message,
+      });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -275,10 +335,72 @@ export default function ProjectDetail() {
           <Badge variant="secondary" className="text-sm">
             {project.status}
           </Badge>
-          <Button variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Project
-          </Button>
+          <Dialog open={isEditProjectModalOpen} onOpenChange={setIsEditProjectModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Project
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Edit Project</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleEditSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Project Title *</Label>
+                  <Input
+                    id="edit-title"
+                    value={editFormData.title}
+                    onChange={(e) => handleEditInputChange('title', e.target.value)}
+                    placeholder="e.g., Summer 2024 Campaign"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editFormData.description}
+                    onChange={(e) => handleEditInputChange('description', e.target.value)}
+                    placeholder="Describe your project goals, target audience, and key messaging..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={editFormData.status} onValueChange={(value) => handleEditInputChange('status', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="on_hold">On Hold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditProjectModalOpen(false)}
+                    disabled={editLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={editLoading}>
+                    {editLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Update Project
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isCreateDealModalOpen} onOpenChange={setIsCreateDealModalOpen}>
             <DialogTrigger asChild>
               <Button size="sm">

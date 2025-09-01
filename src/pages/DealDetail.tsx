@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +28,10 @@ import {
   TrendingUp,
   Eye,
   Download,
-  Edit
+  Edit,
+  Loader2,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 interface Deal {
@@ -82,6 +87,25 @@ interface MilestoneReviewData {
   feedback: string;
 }
 
+interface EditDealData {
+  project_id: string;
+  creator_id: string | null;
+  amount_total: number;
+  currency: string;
+  state: 'DRAFT' | 'FUNDED' | 'RELEASED' | 'DISPUTED' | 'REFUNDED';
+}
+
+interface EditMilestoneData {
+  id?: string;
+  title: string;
+  amount: number;
+  due_at: string;
+}
+
+interface MilestoneEditFormData {
+  milestones: EditMilestoneData[];
+}
+
 export default function DealDetail() {
   const { id } = useParams<{ id: string }>();
   const { userProfile } = useAuth();
@@ -92,12 +116,28 @@ export default function DealDetail() {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [milestonesEditLoading, setMilestonesEditLoading] = useState(false);
   
   // Review modal state
   const [reviewData, setReviewData] = useState<MilestoneReviewData>({
     milestoneId: '',
     action: 'approve',
     feedback: ''
+  });
+
+  // Edit modal states
+  const [isEditDealModalOpen, setIsEditDealModalOpen] = useState(false);
+  const [isEditMilestonesModalOpen, setIsEditMilestonesModalOpen] = useState(false);
+  const [editDealData, setEditDealData] = useState<EditDealData>({
+    project_id: '',
+    creator_id: null,
+    amount_total: 0,
+    currency: 'USD',
+    state: 'DRAFT'
+  });
+  const [editMilestonesData, setEditMilestonesData] = useState<MilestoneEditFormData>({
+    milestones: []
   });
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
@@ -191,6 +231,24 @@ export default function DealDetail() {
         milestones: milestonesWithDeliverables
       });
 
+      // Initialize edit form data
+      setEditDealData({
+        project_id: dealData.project_id,
+        creator_id: dealData.creator_id,
+        amount_total: dealData.amount_total,
+        currency: dealData.currency,
+        state: dealData.state
+      });
+
+      setEditMilestonesData({
+        milestones: milestonesWithDeliverables.map(m => ({
+          id: m.id,
+          title: m.title,
+          amount: m.amount,
+          due_at: m.due_at ? new Date(m.due_at).toISOString().split('T')[0] : ''
+        }))
+      });
+
     } catch (error) {
       console.error('Error fetching deal details:', error);
       toast({
@@ -276,6 +334,184 @@ export default function DealDetail() {
     } finally {
       setReviewLoading(false);
     }
+  };
+
+  const handleEditDeal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deal || !userProfile) return;
+
+    // Only allow editing if user is brand owner or admin and deal is in DRAFT state
+    const canEdit = 
+      (userProfile.role === 'BRAND' && deal.projects.users.id === userProfile.id) ||
+      userProfile.role === 'ADMIN';
+
+    if (!canEdit) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to edit this deal.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (deal.state !== 'DRAFT') {
+      toast({
+        title: "Cannot Edit",
+        description: "Only draft deals can be edited.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .update({
+          amount_total: editDealData.amount_total,
+          currency: editDealData.currency,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', deal.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Deal Updated",
+        description: "Deal details have been updated successfully.",
+      });
+
+      setIsEditDealModalOpen(false);
+      fetchDealDetails(); // Refresh data
+
+    } catch (error: any) {
+      console.error('Error updating deal:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update deal. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditMilestones = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deal || !userProfile) return;
+
+    // Only allow editing if user is brand owner or admin and deal is in DRAFT state
+    const canEdit = 
+      (userProfile.role === 'BRAND' && deal.projects.users.id === userProfile.id) ||
+      userProfile.role === 'ADMIN';
+
+    if (!canEdit) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to edit this deal.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (deal.state !== 'DRAFT') {
+      toast({
+        title: "Cannot Edit",
+        description: "Only draft deals can be edited.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setMilestonesEditLoading(true);
+    try {
+      // Update existing milestones and create new ones
+      for (const milestone of editMilestonesData.milestones) {
+        if (milestone.id) {
+          // Update existing milestone
+          const { error } = await supabase
+            .from('milestones')
+            .update({
+              title: milestone.title,
+              amount: milestone.amount,
+              due_at: milestone.due_at || null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', milestone.id);
+
+          if (error) throw error;
+        } else {
+          // Create new milestone
+          const { error } = await supabase
+            .from('milestones')
+            .insert({
+              deal_id: deal.id,
+              title: milestone.title,
+              amount: milestone.amount,
+              due_at: milestone.due_at || null,
+              state: 'PENDING'
+            });
+
+          if (error) throw error;
+        }
+      }
+
+      // Remove milestones that were deleted (exist in original but not in edit data)
+      const originalMilestoneIds = deal.milestones.map(m => m.id);
+      const editMilestoneIds = editMilestonesData.milestones.filter(m => m.id).map(m => m.id);
+      const toDelete = originalMilestoneIds.filter(id => !editMilestoneIds.includes(id));
+
+      if (toDelete.length > 0) {
+        const { error } = await supabase
+          .from('milestones')
+          .delete()
+          .in('id', toDelete);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Milestones Updated",
+        description: "Milestones have been updated successfully.",
+      });
+
+      setIsEditMilestonesModalOpen(false);
+      fetchDealDetails(); // Refresh data
+
+    } catch (error: any) {
+      console.error('Error updating milestones:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update milestones. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setMilestonesEditLoading(false);
+    }
+  };
+
+  const addMilestone = () => {
+    setEditMilestonesData(prev => ({
+      milestones: [...prev.milestones, {
+        title: '',
+        amount: 0,
+        due_at: ''
+      }]
+    }));
+  };
+
+  const removeMilestone = (index: number) => {
+    setEditMilestonesData(prev => ({
+      milestones: prev.milestones.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateMilestone = (index: number, field: keyof EditMilestoneData, value: string | number) => {
+    setEditMilestonesData(prev => ({
+      milestones: prev.milestones.map((milestone, i) => 
+        i === index ? { ...milestone, [field]: value } : milestone
+      )
+    }));
   };
 
   const getStateColor = (state: string) => {
@@ -364,9 +600,78 @@ export default function DealDetail() {
             <p className="text-muted-foreground">Deal #{deal.id.slice(-8)}</p>
           </div>
         </div>
-        <Badge variant={getStateColor(deal.state) as any} className="text-sm">
-          {deal.state}
-        </Badge>
+        <div className="flex items-center space-x-2">
+          <Badge variant={getStateColor(deal.state) as any} className="text-sm">
+            {deal.state}
+          </Badge>
+          {deal.state === 'DRAFT' && ((userProfile?.role === 'BRAND' && deal.projects.users.id === userProfile.id) || userProfile?.role === 'ADMIN') && (
+            <Dialog open={isEditDealModalOpen} onOpenChange={setIsEditDealModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Deal
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Edit Deal</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleEditDeal} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount_total">Total Amount ($)</Label>
+                    <Input
+                      id="amount_total"
+                      type="number"
+                      value={editDealData.amount_total / 100}
+                      onChange={(e) => setEditDealData(prev => ({
+                        ...prev,
+                        amount_total: Math.round(parseFloat(e.target.value || '0') * 100)
+                      }))}
+                      step="0.01"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select 
+                      value={editDealData.currency} 
+                      onValueChange={(value) => setEditDealData(prev => ({
+                        ...prev,
+                        currency: value
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditDealModalOpen(false)}
+                      disabled={editLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={editLoading}>
+                      {editLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Update Deal
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Overview Cards */}
@@ -439,10 +744,108 @@ export default function DealDetail() {
 
         <TabsContent value="milestones" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Milestones</h2>
-            <Badge variant="outline">
-              {deal.milestones.length} milestone{deal.milestones.length !== 1 ? 's' : ''}
-            </Badge>
+            <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-semibold">Milestones</h2>
+              <Badge variant="outline">
+                {deal.milestones.length} milestone{deal.milestones.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+            {deal.state === 'DRAFT' && ((userProfile?.role === 'BRAND' && deal.projects.users.id === userProfile.id) || userProfile?.role === 'ADMIN') && (
+              <Dialog open={isEditMilestonesModalOpen} onOpenChange={setIsEditMilestonesModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Milestones
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Edit Milestones</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleEditMilestones} className="space-y-6">
+                    <div className="space-y-4">
+                      {editMilestonesData.milestones.map((milestone, index) => (
+                        <Card key={index}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start space-x-4">
+                              <div className="flex-1 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor={`title-${index}`}>Title</Label>
+                                    <Input
+                                      id={`title-${index}`}
+                                      value={milestone.title}
+                                      onChange={(e) => updateMilestone(index, 'title', e.target.value)}
+                                      placeholder="Milestone title"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor={`amount-${index}`}>Amount ($)</Label>
+                                    <Input
+                                      id={`amount-${index}`}
+                                      type="number"
+                                      value={milestone.amount / 100}
+                                      onChange={(e) => updateMilestone(index, 'amount', Math.round(parseFloat(e.target.value || '0') * 100))}
+                                      step="0.01"
+                                      min="0"
+                                      required
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`due-${index}`}>Due Date (Optional)</Label>
+                                  <Input
+                                    id={`due-${index}`}
+                                    type="date"
+                                    value={milestone.due_at}
+                                    onChange={(e) => updateMilestone(index, 'due_at', e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeMilestone(index)}
+                                disabled={editMilestonesData.milestones.length === 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addMilestone}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Milestone
+                    </Button>
+
+                    <div className="flex gap-3 pt-4 border-t">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditMilestonesModalOpen(false)}
+                        disabled={milestonesEditLoading}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={milestonesEditLoading}>
+                        {milestonesEditLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Update Milestones
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <div className="space-y-4">

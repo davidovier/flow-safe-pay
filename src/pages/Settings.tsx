@@ -5,14 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, User, CreditCard, Shield, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { KYCVerificationForm } from '@/components/kyc/KYCVerificationForm';
 
 export default function Settings() {
   const { userProfile, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: userProfile?.first_name || '',
     last_name: userProfile?.last_name || '',
@@ -166,9 +169,22 @@ export default function Settings() {
                   <strong>Action Required:</strong> Complete your KYC verification to receive payments.
                   You'll be redirected to Stripe to provide required information.
                 </p>
-                <Button className="mt-3" size="sm">
-                  Complete Verification
-                </Button>
+                <Dialog open={isKYCModalOpen} onOpenChange={setIsKYCModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="mt-3" size="sm">
+                      Complete Verification
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+                    <KYCVerificationForm 
+                      onSuccess={() => {
+                        setIsKYCModalOpen(false);
+                        window.location.reload(); // Refresh to update KYC status
+                      }}
+                      onClose={() => setIsKYCModalOpen(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </CardContent>
