@@ -85,6 +85,9 @@ export default function Payouts() {
   useEffect(() => {
     if (userProfile?.role === 'CREATOR') {
       fetchPayoutData();
+    } else if (userProfile?.role) {
+      // If user is not a creator, set loading to false
+      setLoading(false);
     }
   }, [userProfile]);
 
@@ -93,8 +96,12 @@ export default function Payouts() {
     
     setLoading(true);
     try {
+      // Initialize default states
+      let payoutsData: Payout[] = [];
+      let paymentMethodsData: PaymentMethod[] = [];
+      
       // Fetch payouts with related data
-      const { data: payoutsData, error: payoutsError } = await supabase
+      const { data: payoutsResult, error: payoutsError } = await supabase
         .from('payouts')
         .select(`
           *,
@@ -114,16 +121,34 @@ export default function Payouts() {
         .eq('user_id', userProfile.id)
         .order('requested_at', { ascending: false });
 
-      if (payoutsError) throw payoutsError;
+      // Handle payouts errors gracefully
+      if (payoutsError) {
+        console.error('Payouts fetch error:', payoutsError);
+        // If table doesn't exist, continue with empty array
+        if (payoutsError.code !== 'PGRST301' && !payoutsError.message?.includes('does not exist')) {
+          throw payoutsError;
+        }
+      } else {
+        payoutsData = Array.isArray(payoutsResult) ? payoutsResult : [];
+      }
 
       // Fetch payment methods
-      const { data: paymentMethodsData, error: paymentMethodsError } = await supabase
+      const { data: paymentMethodsResult, error: paymentMethodsError } = await supabase
         .from('payment_methods')
         .select('*')
         .eq('user_id', userProfile.id)
         .order('is_default', { ascending: false });
 
-      if (paymentMethodsError) throw paymentMethodsError;
+      // Handle payment methods errors gracefully
+      if (paymentMethodsError) {
+        console.error('Payment methods fetch error:', paymentMethodsError);
+        // If table doesn't exist, continue with empty array
+        if (paymentMethodsError.code !== 'PGRST301' && !paymentMethodsError.message?.includes('does not exist')) {
+          throw paymentMethodsError;
+        }
+      } else {
+        paymentMethodsData = Array.isArray(paymentMethodsResult) ? paymentMethodsResult : [];
+      }
 
       // Fetch user balance
       const { data: balanceData, error: balanceError } = await supabase
@@ -133,39 +158,58 @@ export default function Payouts() {
         .eq('currency', 'usd')
         .single();
 
-      // If no balance record exists, create one by calling the calculation function
-      if (balanceError?.code === 'PGRST116') {
-        const { error: updateError } = await supabase.rpc('update_user_balance', {
-          user_uuid: userProfile.id
-        });
+      // Handle balance data
+      if (balanceError) {
+        console.error('Balance fetch error:', balanceError);
         
-        if (!updateError) {
-          // Fetch again after creation
-          const { data: newBalanceData } = await supabase
-            .from('user_balances')
-            .select('*')
-            .eq('user_id', userProfile.id)
-            .eq('currency', 'usd')
-            .single();
-          
-          if (newBalanceData) {
-            setUserBalance(newBalanceData);
+        // If no balance record exists, try to create one
+        if (balanceError.code === 'PGRST116') {
+          try {
+            const { error: updateError } = await supabase.rpc('update_user_balance', {
+              user_uuid: userProfile.id
+            });
+            
+            if (!updateError) {
+              // Fetch again after creation
+              const { data: newBalanceData } = await supabase
+                .from('user_balances')
+                .select('*')
+                .eq('user_id', userProfile.id)
+                .eq('currency', 'usd')
+                .single();
+              
+              if (newBalanceData) {
+                setUserBalance(newBalanceData);
+              }
+            }
+          } catch (balanceUpdateError) {
+            console.error('Balance update error:', balanceUpdateError);
+            // Keep default balance if function doesn't exist
           }
         }
-      } else if (!balanceError && balanceData) {
+        // If table/function doesn't exist, keep default balance
+      } else if (balanceData) {
         setUserBalance(balanceData);
       }
 
-      setPayouts(payoutsData || []);
-      setPaymentMethods(paymentMethodsData || []);
+      setPayouts(payoutsData);
+      setPaymentMethods(paymentMethodsData);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching payout data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load payout information. Please try again.",
-        variant: "destructive"
-      });
+      
+      // Only show user-facing errors for actual data issues
+      if (!error.message?.includes('does not exist') && error.code !== 'PGRST301') {
+        toast({
+          title: "Error",
+          description: "Failed to load payout information. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+      // Always set empty arrays so UI doesn't break
+      setPayouts([]);
+      setPaymentMethods([]);
     } finally {
       setLoading(false);
     }
@@ -204,7 +248,16 @@ export default function Payouts() {
         description_text: 'Balance withdrawal request'
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Request payout error:', error);
+        
+        // Handle function not found errors
+        if (error.code === 'PGRST202' || error.message?.includes('function') || error.message?.includes('does not exist')) {
+          throw new Error('Payout system is not yet configured. Please contact support.');
+        }
+        
+        throw error;
+      }
 
       toast({
         title: "Payout Requested! 💰",
@@ -464,10 +517,12 @@ export default function Payouts() {
         
         {payouts.length === 0 ? (
           <Card>
-            <CardContent className="flex items-center justify-center py-8">
+            <CardContent className="flex items-center justify-center py-12">
               <div className="text-center">
-                <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No payouts yet. Complete deals to start earning!</p>
+                <Wallet className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No Payouts Yet</h3>
+                <p className="text-muted-foreground mb-4">You haven't requested any payouts yet.</p>
+                <p className="text-sm text-muted-foreground">Complete deals and build up your balance to start requesting payouts.</p>
               </div>
             </CardContent>
           </Card>
@@ -539,7 +594,18 @@ export default function Payouts() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">Payment Methods</h2>
         <div className="grid gap-4">
-          {paymentMethods.map((method) => (
+          {paymentMethods.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <CreditCard className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Payment Methods</h3>
+                  <p className="text-muted-foreground mb-4">Add a payment method to receive payouts.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            paymentMethods.map((method) => (
             <Card key={method.id} className={method.is_default ? 'ring-2 ring-primary' : ''}>
               <CardContent className="flex items-center justify-between p-4">
                 <div className="flex items-center space-x-3">
@@ -570,7 +636,8 @@ export default function Payouts() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
           <Button variant="outline" className="h-16 border-dashed">
             <Plus className="h-4 w-4 mr-2" />
             Add Payment Method
