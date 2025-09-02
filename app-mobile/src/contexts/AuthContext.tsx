@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../services/api';
+import { DeepLinkingService } from '../navigation/DeepLinking';
+import { NavigationHelper } from '../navigation/NavigationHelper';
 
 interface User {
   id: string;
@@ -73,6 +75,18 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Initialize deep linking when auth state changes
+  useEffect(() => {
+    const initializeDeepLinking = async () => {
+      const deepLinking = DeepLinkingService.getInstance();
+      await deepLinking.initialize(!!state.user, state.user?.role);
+    };
+
+    if (!state.isLoading) {
+      initializeDeepLinking();
+    }
+  }, [state.user, state.isLoading]);
+
   const login = async (email: string, password: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -87,6 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       
       dispatch({ type: 'SET_USER', payload: { user, accessToken } });
+      
+      // Handle post-login navigation (including any pending deep links)
+      const deepLinking = DeepLinkingService.getInstance();
+      const pendingUrl = deepLinking.getPendingUrl();
+      NavigationHelper.handlePostAuthRedirect(pendingUrl);
     } catch (error: any) {
       const message = error.response?.data?.message || 'Login failed';
       dispatch({ type: 'SET_ERROR', payload: message });
@@ -108,6 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       
       dispatch({ type: 'SET_USER', payload: { user, accessToken } });
+      
+      // Handle post-registration navigation
+      NavigationHelper.handlePostAuthRedirect();
     } catch (error: any) {
       const message = error.response?.data?.message || 'Registration failed';
       dispatch({ type: 'SET_ERROR', payload: message });

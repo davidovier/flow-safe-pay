@@ -16,6 +16,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.flowpay.app",
       "buildNumber": "1.0.0",
+      "associatedDomains": [
+        "applinks:flowpay.app",
+        "applinks:www.flowpay.app"
+      ],
       "infoPlist": {
         "NSCameraUsageDescription": "FlowPay needs access to your camera to upload deliverable content.",
         "NSPhotoLibraryUsageDescription": "FlowPay needs access to your photo library to upload deliverable content.",
@@ -34,6 +38,23 @@
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "flowpay.app"
+            },
+            {
+              "scheme": "https", 
+              "host": "www.flowpay.app"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {

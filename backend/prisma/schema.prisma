@@ -38,11 +38,30 @@ enum MilestoneState {
   DISPUTED
 }
 
-enum DisputeState {
+enum DisputeStatus {
   OPEN
-  PARTIAL
+  ESCALATED
+  UNDER_REVIEW
   RESOLVED
-  REJECTED
+  WITHDRAWN
+}
+
+enum DisputeCategory {
+  QUALITY
+  DEADLINE
+  COMMUNICATION
+  PAYMENT
+  SCOPE
+  OTHER
+}
+
+enum ResolutionType {
+  FULL_REFUND
+  PARTIAL_REFUND
+  FAVOR_CREATOR
+  FAVOR_BRAND
+  COMPROMISE
+  DISMISS
 }
 
 enum PaymentProvider {
@@ -60,22 +79,27 @@ enum PayoutStatus {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  hashedPassword  String?   @map("hashed_password")
-  role            UserRole
-  country         String?
-  stripeAccountId String?   @map("stripe_account_id")
-  kycStatus       KycStatus @default(PENDING) @map("kyc_status")
-  deletedAt       DateTime? @map("deleted_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id                      String    @id @default(cuid())
+  email                   String    @unique
+  hashedPassword          String?   @map("hashed_password")
+  role                    UserRole
+  country                 String?
+  stripeAccountId         String?   @map("stripe_account_id")
+  kycStatus               KycStatus @default(PENDING) @map("kyc_status")
+  suspended               Boolean   @default(false)
+  suspendedAt             DateTime? @map("suspended_at")
+  notificationPreferences Json?     @map("notification_preferences")
+  deletedAt               DateTime? @map("deleted_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   // Relationships
-  brandProjects   Project[]    @relation("BrandProjects")
-  creatorDeals    Deal[]       @relation("CreatorDeals")
-  raisedDisputes  Dispute[]    @relation("DisputeRaiser")
-  events          Event[]      @relation("UserEvents")
+  brandProjects     Project[]           @relation("BrandProjects")
+  creatorDeals      Deal[]              @relation("CreatorDeals")
+  raisedDisputes    Dispute[]           @relation("DisputeRaiser")
+  disputeResponses  DisputeResponse[]   @relation("DisputeResponses")
+  disputeResolutions DisputeResolution[] @relation("DisputeResolutions")
+  events            Event[]             @relation("UserEvents")
 
   @@map("users")
   @@index([email])
@@ -184,21 +208,67 @@ model Contract {
 }
 
 model Dispute {
-  id            String       @id @default(cuid())
-  dealId        String
-  raisedByUserId String
-  reason        String
-  state         DisputeState @default(OPEN)
-  resolution    String?
-  resolvedAt    DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                    String          @id @default(cuid())
+  dealId                String
+  raisedByUserId        String
+  reason                String
+  category              DisputeCategory
+  evidence              Json?           // Array of evidence objects
+  requestedResolution   String          // What resolution the disputer wants
+  requestedAmount       Int?            // Requested refund amount in cents
+  status                DisputeStatus   @default(OPEN)
+  priority              String?         // LOW, MEDIUM, HIGH, URGENT
+  escalatedAt           DateTime?
+  escalatedBy           String?
+  resolvedAt            DateTime?
+  resolvedBy            String?
+  adminNotes            String?
+  resolutionTimeHours   Int?            // Auto-calculated field
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   // Relationships
-  deal          Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  raisedBy      User         @relation("DisputeRaiser", fields: [raisedByUserId], references: [id])
+  deal          Deal                  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  raisedBy      User                  @relation("DisputeRaiser", fields: [raisedByUserId], references: [id])
+  responses     DisputeResponse[]
+  resolutions   DisputeResolution[]
 
   @@map("disputes")
+}
+
+model DisputeResponse {
+  id              String   @id @default(cuid())
+  disputeId       String
+  userId          String
+  message         String
+  evidence        Json?    // Array of evidence objects
+  isAdminResponse Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  dispute         Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  user            User     @relation("DisputeResponses", fields: [userId], references: [id])
+
+  @@map("dispute_responses")
+}
+
+model DisputeResolution {
+  id             String         @id @default(cuid())
+  disputeId      String
+  resolvedBy     String
+  resolutionType ResolutionType
+  resolution     String         // Detailed resolution explanation
+  refundAmount   Int?           // Refund amount in cents if applicable
+  newDeadline    DateTime?      // New milestone deadline if applicable
+  actionRequired Json?          // Required actions from parties
+  createdAt      DateTime       @default(now())
+
+  // Relationships
+  dispute        Dispute        @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  resolvedByUser User           @relation("DisputeResolutions", fields: [resolvedBy], references: [id])
+
+  @@map("dispute_resolutions")
 }
 
 model Payout {

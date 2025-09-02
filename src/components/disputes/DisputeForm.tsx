@@ -1,377 +1,391 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, Upload, X, FileText, Image, Link } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { 
-  AlertTriangle, 
-  FileText, 
-  Upload,
-  Loader2,
-  Scale,
-  MessageSquare
-} from 'lucide-react';
 
-const disputeSchema = z.object({
-  type: z.enum(['quality', 'delivery', 'communication', 'payment', 'other']),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']),
-  subject: z.string().min(5, 'Subject must be at least 5 characters'),
-  description: z.string().min(20, 'Please provide a detailed description (minimum 20 characters)'),
-  desired_outcome: z.string().min(10, 'Please describe what resolution you are seeking'),
-  evidence_description: z.string().optional(),
-  acknowledge_mediation: z.boolean().refine(val => val === true, 'You must acknowledge the mediation process'),
-});
-
-type DisputeForm = z.infer<typeof disputeSchema>;
-
-interface DisputeFormProps {
-  dealId: string;
-  milestoneId?: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+interface Deal {
+  id: string;
+  project: {
+    title: string;
+    brandId: string;
+  };
+  creatorId: string;
+  totalAmount: number;
+  currency: string;
+  state: string;
 }
 
-const disputeTypes = [
-  { value: 'quality', label: 'Quality Issues', description: 'Deliverable does not meet agreed specifications' },
-  { value: 'delivery', label: 'Delivery Issues', description: 'Late delivery or non-delivery of milestones' },
-  { value: 'communication', label: 'Communication Issues', description: 'Lack of communication or unresponsiveness' },
-  { value: 'payment', label: 'Payment Issues', description: 'Payment delays or disputes' },
-  { value: 'other', label: 'Other', description: 'Other issues not covered above' },
+interface Evidence {
+  type: 'TEXT' | 'IMAGE' | 'FILE' | 'URL';
+  content: string;
+  description?: string;
+}
+
+interface DisputeFormProps {
+  deal: Deal;
+  currentUserId: string;
+  onSubmit: (disputeData: any) => Promise<void>;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+const DISPUTE_CATEGORIES = [
+  { value: 'QUALITY', label: 'Quality Issues', description: 'Delivered work does not meet agreed standards' },
+  { value: 'DEADLINE', label: 'Missed Deadlines', description: 'Milestones were not delivered on time' },
+  { value: 'COMMUNICATION', label: 'Communication Problems', description: 'Poor or lack of communication' },
+  { value: 'PAYMENT', label: 'Payment Issues', description: 'Payment-related disputes' },
+  { value: 'SCOPE', label: 'Scope Changes', description: 'Work scope was changed without agreement' },
+  { value: 'OTHER', label: 'Other', description: 'Other issues not listed above' },
 ];
 
-const priorityLevels = [
-  { value: 'low', label: 'Low', description: 'Minor issue, not urgent' },
-  { value: 'medium', label: 'Medium', description: 'Moderate issue requiring attention' },
-  { value: 'high', label: 'High', description: 'Significant issue affecting project progress' },
-  { value: 'urgent', label: 'Urgent', description: 'Critical issue requiring immediate attention' },
+const RESOLUTION_TYPES = [
+  { value: 'FULL_REFUND', label: 'Full Refund', description: 'Request complete refund of payment' },
+  { value: 'PARTIAL_REFUND', label: 'Partial Refund', description: 'Request partial refund for unsatisfactory work' },
+  { value: 'REVISION', label: 'Work Revision', description: 'Request revision of delivered work' },
+  { value: 'EXTENSION', label: 'Deadline Extension', description: 'Request extension of deadline' },
+  { value: 'CANCELLATION', label: 'Deal Cancellation', description: 'Cancel the entire deal' },
+  { value: 'OTHER', label: 'Other Resolution', description: 'Other resolution not listed above' },
 ];
 
-export function DisputeForm({ dealId, milestoneId, onSuccess, onCancel }: DisputeFormProps) {
-  const { userProfile } = useAuth();
+export function DisputeForm({ deal, currentUserId, onSubmit, onCancel, isLoading }: DisputeFormProps) {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<DisputeForm>({
-    resolver: zodResolver(disputeSchema),
-    defaultValues: {
-      type: 'other',
-      priority: 'medium',
-      subject: '',
-      description: '',
-      desired_outcome: '',
-      evidence_description: '',
-      acknowledge_mediation: false,
-    },
+  const [formData, setFormData] = useState({
+    reason: '',
+    category: '',
+    requestedResolution: '',
+    requestedAmount: '',
+  });
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [newEvidence, setNewEvidence] = useState<Evidence>({
+    type: 'TEXT',
+    content: '',
+    description: ''
   });
 
-  const selectedType = form.watch('type');
-  const selectedPriority = form.watch('priority');
+  // Check if user can create disputes
+  const canCreateDispute = deal.creatorId === currentUserId || deal.project.brandId === currentUserId;
+  const isDisputableState = ['FUNDED', 'SUBMITTED', 'REJECTED'].includes(deal.state);
 
-  const onSubmit = async (data: DisputeForm) => {
-    if (!userProfile) return;
-
-    setIsSubmitting(true);
-    try {
-      // Create dispute record
-      const disputeData = {
-        deal_id: dealId,
-        milestone_id: milestoneId || null,
-        initiator_id: userProfile.id,
-        type: data.type,
-        priority: data.priority,
-        subject: data.subject,
-        description: data.description,
-        desired_outcome: data.desired_outcome,
-        evidence_description: data.evidence_description || null,
-        status: 'open',
-        created_at: new Date().toISOString(),
-      };
-
-      const { data: dispute, error: disputeError } = await supabase
-        .from('disputes')
-        .insert(disputeData)
-        .select()
-        .single();
-
-      if (disputeError) throw disputeError;
-
-      // Update deal state to DISPUTED
-      const { error: dealUpdateError } = await supabase
-        .from('deals')
-        .update({ 
-          state: 'DISPUTED',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', dealId);
-
-      if (dealUpdateError) throw dealUpdateError;
-
-      // Update milestone state if applicable
-      if (milestoneId) {
-        await supabase
-          .from('milestones')
-          .update({ 
-            state: 'DISPUTED',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', milestoneId);
-      }
-
-      // Log event
-      await supabase.from('events').insert({
-        actor_user_id: userProfile.id,
-        type: 'dispute.created',
-        payload: {
-          dispute_id: dispute.id,
-          deal_id: dealId,
-          milestone_id: milestoneId,
-          type: data.type,
-          priority: data.priority,
-          has_evidence: !!data.evidence_description,
-        },
-      });
-
-      // Create initial dispute message
-      await supabase.from('dispute_messages').insert({
-        dispute_id: dispute.id,
-        sender_id: userProfile.id,
-        message: `Dispute opened: ${data.subject}\n\n${data.description}`,
-        message_type: 'system',
-        created_at: new Date().toISOString(),
-      });
-
+  const handleAddEvidence = () => {
+    if (!newEvidence.content.trim()) {
       toast({
-        title: 'Dispute Created Successfully',
-        description: 'Your dispute has been submitted and will be reviewed by our mediation team. You will be contacted within 24 hours.',
-      });
-
-      onSuccess();
-    } catch (error: any) {
-      console.error('Dispute creation error:', error);
-      toast({
+        title: 'Error',
+        description: 'Evidence content is required',
         variant: 'destructive',
-        title: 'Failed to Create Dispute',
-        description: error.message || 'Failed to create dispute. Please try again.',
       });
-    } finally {
-      setIsSubmitting(false);
+      return;
+    }
+
+    setEvidence([...evidence, { ...newEvidence }]);
+    setNewEvidence({ type: 'TEXT', content: '', description: '' });
+  };
+
+  const handleRemoveEvidence = (index: number) => {
+    setEvidence(evidence.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.reason.trim() || !formData.category || !formData.requestedResolution) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (formData.requestedResolution === 'PARTIAL_REFUND' && !formData.requestedAmount) {
+      toast({
+        title: 'Error',
+        description: 'Please specify the requested refund amount',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const requestedAmount = formData.requestedAmount ? 
+      parseFloat(formData.requestedAmount) * 100 : // Convert to cents
+      (formData.requestedResolution === 'FULL_REFUND' ? deal.totalAmount : undefined);
+
+    try {
+      await onSubmit({
+        dealId: deal.id,
+        reason: formData.reason,
+        category: formData.category,
+        requestedResolution: formData.requestedResolution,
+        requestedAmount,
+        evidence: evidence.length > 0 ? evidence : undefined,
+      });
+    } catch (error) {
+      console.error('Failed to submit dispute:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit dispute. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (!canCreateDispute) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center">
+            <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
+            <p className="text-muted-foreground">
+              Only deal participants can create disputes.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isDisputableState) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center">
+            <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Cannot Create Dispute</h3>
+            <p className="text-muted-foreground">
+              Disputes can only be created for funded, submitted, or rejected deals.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Current deal state: <Badge variant="outline">{deal.state}</Badge>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const getEvidenceIcon = (type: string) => {
+    switch (type) {
+      case 'IMAGE': return <Image className="h-4 w-4" />;
+      case 'FILE': return <FileText className="h-4 w-4" />;
+      case 'URL': return <Link className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
     }
   };
 
   return (
-    <Card className="max-w-3xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5" />
-          Open Dispute
-        </CardTitle>
-        <div className="text-sm text-muted-foreground">
-          <p>Submit a dispute for mediation. Our team will review your case and work towards a fair resolution.</p>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Dispute Type */}
-          <div className="space-y-3">
-            <Label>Dispute Type *</Label>
-            <Select onValueChange={(value) => form.setValue('type', value as any)}>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            Create Dispute
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Submit a formal dispute for the deal "{deal.project.title}". 
+            Please provide detailed information to help resolve the issue.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Dispute Category */}
+          <div className="space-y-2">
+            <Label htmlFor="category">Dispute Category *</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(value) => setFormData({ ...formData, category: value })}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select dispute type" />
+                <SelectValue placeholder="Select dispute category" />
               </SelectTrigger>
               <SelectContent>
-                {disputeTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
+                {DISPUTE_CATEGORIES.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
                     <div>
-                      <div className="font-medium">{type.label}</div>
-                      <div className="text-xs text-muted-foreground">{type.description}</div>
+                      <div className="font-medium">{category.label}</div>
+                      <div className="text-xs text-muted-foreground">{category.description}</div>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {form.formState.errors.type && (
-              <p className="text-sm text-red-600">{form.formState.errors.type.message}</p>
-            )}
           </div>
 
-          {/* Priority */}
-          <div className="space-y-3">
-            <Label>Priority Level *</Label>
-            <Select onValueChange={(value) => form.setValue('priority', value as any)}>
+          {/* Reason */}
+          <div className="space-y-2">
+            <Label htmlFor="reason">Detailed Reason *</Label>
+            <Textarea
+              id="reason"
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              placeholder="Please provide a detailed explanation of the issue..."
+              className="min-h-[120px]"
+              maxLength={1000}
+            />
+            <p className="text-xs text-muted-foreground">
+              {formData.reason.length}/1000 characters
+            </p>
+          </div>
+
+          {/* Requested Resolution */}
+          <div className="space-y-2">
+            <Label htmlFor="resolution">Requested Resolution *</Label>
+            <Select
+              value={formData.requestedResolution}
+              onValueChange={(value) => setFormData({ ...formData, requestedResolution: value })}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
+                <SelectValue placeholder="Select desired resolution" />
               </SelectTrigger>
               <SelectContent>
-                {priorityLevels.map((priority) => (
-                  <SelectItem key={priority.value} value={priority.value}>
+                {RESOLUTION_TYPES.map((resolution) => (
+                  <SelectItem key={resolution.value} value={resolution.value}>
                     <div>
-                      <div className="font-medium">{priority.label}</div>
-                      <div className="text-xs text-muted-foreground">{priority.description}</div>
+                      <div className="font-medium">{resolution.label}</div>
+                      <div className="text-xs text-muted-foreground">{resolution.description}</div>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {form.formState.errors.priority && (
-              <p className="text-sm text-red-600">{form.formState.errors.priority.message}</p>
-            )}
           </div>
 
-          {/* Subject */}
-          <div className="space-y-2">
-            <Label htmlFor="subject">Subject *</Label>
-            <Input
-              id="subject"
-              {...form.register('subject')}
-              placeholder="Brief summary of the dispute"
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.subject && (
-              <p className="text-sm text-red-600">{form.formState.errors.subject.message}</p>
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Detailed Description *</Label>
-            <Textarea
-              id="description"
-              {...form.register('description')}
-              placeholder="Provide a detailed explanation of the issue, including timeline of events, communications, and any relevant context..."
-              rows={6}
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-muted-foreground">
-              Include as much detail as possible to help our mediation team understand the situation.
-            </p>
-            {form.formState.errors.description && (
-              <p className="text-sm text-red-600">{form.formState.errors.description.message}</p>
-            )}
-          </div>
-
-          {/* Desired Outcome */}
-          <div className="space-y-2">
-            <Label htmlFor="desired_outcome">Desired Resolution *</Label>
-            <Textarea
-              id="desired_outcome"
-              {...form.register('desired_outcome')}
-              placeholder="What outcome are you seeking? (e.g., refund, milestone revision, additional deliverables, etc.)"
-              rows={3}
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.desired_outcome && (
-              <p className="text-sm text-red-600">{form.formState.errors.desired_outcome.message}</p>
-            )}
-          </div>
-
-          {/* Evidence Description */}
-          <div className="space-y-2">
-            <Label htmlFor="evidence_description">Supporting Evidence (Optional)</Label>
-            <Textarea
-              id="evidence_description"
-              {...form.register('evidence_description')}
-              placeholder="Describe any evidence you have (screenshots, emails, files, etc.). You can upload files after the dispute is created."
-              rows={3}
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-muted-foreground">
-              Evidence files can be uploaded in the dispute chat after submission.
-            </p>
-          </div>
-
-          {/* Mediation Process Info */}
-          <Alert>
-            <Scale className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Mediation Process:</strong>
-              <ul className="mt-2 space-y-1 text-sm">
-                <li>• Our mediation team will review your dispute within 24 hours</li>
-                <li>• Both parties will be invited to a mediated discussion</li>
-                <li>• You can provide additional evidence and communicate through the dispute chat</li>
-                <li>• Our goal is to reach a fair resolution that works for everyone</li>
-                <li>• Funds remain in escrow during the dispute process</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
-
-          {/* Acknowledgment */}
-          <div className="space-y-3">
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="acknowledge_mediation"
-                checked={form.watch('acknowledge_mediation')}
-                onCheckedChange={(checked) => 
-                  form.setValue('acknowledge_mediation', checked as boolean)
+          {/* Requested Amount (for refund requests) */}
+          {(formData.requestedResolution === 'PARTIAL_REFUND' || formData.requestedResolution === 'FULL_REFUND') && (
+            <div className="space-y-2">
+              <Label htmlFor="amount">
+                Requested Amount ({deal.currency.toUpperCase()}) *
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                max={deal.totalAmount / 100}
+                value={formData.requestedAmount}
+                onChange={(e) => setFormData({ ...formData, requestedAmount: e.target.value })}
+                placeholder={formData.requestedResolution === 'FULL_REFUND' ? 
+                  `${(deal.totalAmount / 100).toFixed(2)} (full amount)` : 
+                  '0.00'
                 }
               />
-              <div className="space-y-1">
-                <Label htmlFor="acknowledge_mediation" className="text-sm leading-none">
-                  I understand and agree to the mediation process
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  I acknowledge that disputes will be handled through FlowPay's mediation process and I will participate in good faith to reach a resolution.
-                </p>
+              <p className="text-xs text-muted-foreground">
+                Deal total: {(deal.totalAmount / 100).toFixed(2)} {deal.currency.toUpperCase()}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Evidence Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Supporting Evidence (Optional)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Add any evidence that supports your dispute claim.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add Evidence Form */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="evidence-type">Evidence Type</Label>
+                <Select
+                  value={newEvidence.type}
+                  onValueChange={(value: any) => setNewEvidence({ ...newEvidence, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TEXT">Text/Description</SelectItem>
+                    <SelectItem value="IMAGE">Image URL</SelectItem>
+                    <SelectItem value="FILE">File URL</SelectItem>
+                    <SelectItem value="URL">Reference URL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-2 space-y-2">
+                <Label htmlFor="evidence-content">Content</Label>
+                <Input
+                  id="evidence-content"
+                  value={newEvidence.content}
+                  onChange={(e) => setNewEvidence({ ...newEvidence, content: e.target.value })}
+                  placeholder={
+                    newEvidence.type === 'TEXT' ? 'Enter text description...' :
+                    newEvidence.type === 'URL' ? 'https://...' :
+                    'Enter URL...'
+                  }
+                />
               </div>
             </div>
-            {form.formState.errors.acknowledge_mediation && (
-              <p className="text-sm text-red-600">
-                {form.formState.errors.acknowledge_mediation.message}
-              </p>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="evidence-description">Description (Optional)</Label>
+              <Input
+                id="evidence-description"
+                value={newEvidence.description}
+                onChange={(e) => setNewEvidence({ ...newEvidence, description: e.target.value })}
+                placeholder="Brief description of this evidence..."
+              />
+            </div>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleAddEvidence}
+              className="w-full"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Add Evidence
+            </Button>
           </div>
 
-          {/* Priority Warning */}
-          {selectedPriority === 'urgent' && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
-                <strong>Urgent Priority:</strong> This dispute will be escalated immediately. Please ensure this is truly urgent as it requires immediate attention from our mediation team.
-              </AlertDescription>
-            </Alert>
+          {/* Evidence List */}
+          {evidence.length > 0 && (
+            <div className="space-y-2">
+              <Label>Added Evidence</Label>
+              {evidence.map((item, index) => (
+                <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  {getEvidenceIcon(item.type)}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{item.type}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {item.content}
+                    </div>
+                    {item.description && (
+                      <div className="text-xs text-muted-foreground">
+                        {item.description}
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveEvidence(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
+        </CardContent>
+      </Card>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating Dispute...
-                </>
-              ) : (
-                <>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Submit Dispute
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      {/* Actions */}
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading} className="bg-orange-600 hover:bg-orange-700">
+          {isLoading ? 'Submitting...' : 'Submit Dispute'}
+        </Button>
+      </div>
+    </form>
   );
 }

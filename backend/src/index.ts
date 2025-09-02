@@ -7,6 +7,7 @@ import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { createServer } from 'http';
 
 import { authRoutes } from './routes/auth.js';
 import { projectRoutes } from './routes/projects.js';
@@ -16,8 +17,14 @@ import { webhookRoutes } from './routes/webhooks.js';
 import { userRoutes } from './routes/users.js';
 import { payoutRoutes } from './routes/payouts.js';
 import { uploadRoutes } from './routes/uploads.js';
+import { notificationRoutes } from './routes/notifications.js';
+import { disputeRoutes } from './routes/disputes.js';
+import { WebSocketServer } from './services/websocket/WebSocketServer.js';
 
 const prisma = new PrismaClient();
+
+// Global WebSocket server instance
+let webSocketServer: WebSocketServer;
 
 const fastify = Fastify({
   logger: {
@@ -35,6 +42,14 @@ const fastify = Fastify({
     },
   },
 });
+
+// Export function to get WebSocket server instance
+export function getWebSocketServer(): WebSocketServer {
+  if (!webSocketServer) {
+    throw new Error('WebSocket server not initialized');
+  }
+  return webSocketServer;
+}
 
 async function startServer() {
   try {
@@ -132,6 +147,8 @@ async function startServer() {
     await fastify.register(payoutRoutes, { prefix: '/payouts' });
     await fastify.register(uploadRoutes, { prefix: '/uploads' });
     await fastify.register(webhookRoutes, { prefix: '/webhooks' });
+    await fastify.register(notificationRoutes, { prefix: '/notifications' });
+    await fastify.register(disputeRoutes, { prefix: '/disputes' });
 
     // Error handler
     fastify.setErrorHandler((error, request, reply) => {
@@ -152,14 +169,27 @@ async function startServer() {
       }
     });
 
+    // Initialize WebSocket server
+    const httpServer = createServer();
+    webSocketServer = new WebSocketServer(httpServer);
+    
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       fastify.log.info(`Received ${signal}. Shutting down gracefully...`);
       
       try {
+        // Shutdown WebSocket server first
+        if (webSocketServer) {
+          await webSocketServer.shutdown();
+        }
+        
         await prisma.$disconnect();
         await fastify.close();
-        process.exit(0);
+        
+        // Close HTTP server
+        httpServer.close(() => {
+          process.exit(0);
+        });
       } catch (error) {
         fastify.log.error('Error during shutdown:', error);
         process.exit(1);
@@ -169,10 +199,17 @@ async function startServer() {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-    // Start server
+    // Start servers
     const port = parseInt(process.env.PORT || '3001', 10);
+    const wsPort = parseInt(process.env.WS_PORT || '4000', 10);
     const host = process.env.HOST || '0.0.0.0';
     
+    // Start HTTP server for WebSocket
+    httpServer.listen(wsPort, host, () => {
+      fastify.log.info(`🔌 WebSocket server ready at ws://${host}:${wsPort}`);
+    });
+    
+    // Start Fastify server
     await fastify.listen({ port, host });
     fastify.log.info(`🚀 FlowPay API server ready at http://${host}:${port}`);
     fastify.log.info(`📚 API documentation available at http://${host}:${port}/docs`);
