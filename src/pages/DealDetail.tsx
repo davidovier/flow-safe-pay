@@ -13,6 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { FundDealForm } from '@/components/deals/FundDealForm';
+import { DealStatusTimeline } from '@/components/deals/DealStatusTimeline';
+import { DeliverableViewer } from '@/components/deliverables/DeliverableViewer';
+import { DisputeForm } from '@/components/disputes/DisputeForm';
 import { 
   ArrowLeft,
   Calendar,
@@ -31,7 +35,9 @@ import {
   Edit,
   Loader2,
   Plus,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 
 interface Deal {
@@ -140,6 +146,8 @@ export default function DealDetail() {
     milestones: []
   });
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [showFundingForm, setShowFundingForm] = useState(false);
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -580,6 +588,44 @@ export default function DealDetail() {
   const canReviewMilestones = userProfile?.role === 'BRAND' && 
                               deal.projects.users.id === userProfile.id;
 
+  const canFundDeal = userProfile?.role === 'BRAND' && 
+                      deal.projects.users.id === userProfile.id &&
+                      deal.state === 'DRAFT';
+
+  const canDispute = userProfile && deal.state !== 'DRAFT' && deal.state !== 'REFUNDED';
+
+  // Show funding form
+  if (showFundingForm) {
+    return (
+      <div className="container mx-auto py-8">
+        <FundDealForm
+          deal={deal}
+          onSuccess={() => {
+            setShowFundingForm(false);
+            fetchDealDetails();
+          }}
+          onCancel={() => setShowFundingForm(false)}
+        />
+      </div>
+    );
+  }
+
+  // Show dispute form
+  if (showDisputeForm) {
+    return (
+      <div className="container mx-auto py-8">
+        <DisputeForm
+          dealId={deal.id}
+          onSuccess={() => {
+            setShowDisputeForm(false);
+            fetchDealDetails();
+          }}
+          onCancel={() => setShowDisputeForm(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -602,6 +648,23 @@ export default function DealDetail() {
           <Badge variant={getStateColor(deal.state) as any} className="text-sm">
             {deal.state}
           </Badge>
+          
+          {/* Fund Deal Button */}
+          {canFundDeal && (
+            <Button onClick={() => setShowFundingForm(true)}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Fund Deal
+            </Button>
+          )}
+          
+          {/* Dispute Button */}
+          {canDispute && (
+            <Button variant="outline" onClick={() => setShowDisputeForm(true)}>
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Open Dispute
+            </Button>
+          )}
+          
           {deal.state === 'DRAFT' && ((userProfile?.role === 'BRAND' && deal.projects.users.id === userProfile.id) || userProfile?.role === 'ADMIN') && (
             <Dialog open={isEditDealModalOpen} onOpenChange={setIsEditDealModalOpen}>
               <DialogTrigger asChild>
@@ -736,6 +799,7 @@ export default function DealDetail() {
       <Tabs defaultValue="milestones" className="space-y-4">
         <TabsList>
           <TabsTrigger value="milestones">Milestones</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="communication">Messages</TabsTrigger>
         </TabsList>
@@ -880,61 +944,45 @@ export default function DealDetail() {
                     <div className="space-y-3">
                       <h4 className="font-medium">Deliverables</h4>
                       {milestone.deliverables.map((deliverable) => (
-                        <div key={deliverable.id} className="border rounded-lg p-3">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <h5 className="font-medium">
-                                {deliverable.url ? 'Submitted Content' : `Deliverable #${index + 1}`}
-                              </h5>
-                              <p className="text-sm text-muted-foreground">
-                                {deliverable.url ? 'Content submission available' : 'Deliverable submission'}
-                              </p>
-                              {deliverable.submitted_at && (
-                                <p className="text-xs text-muted-foreground">
-                                  Submitted {formatDate(deliverable.submitted_at)}
-                                </p>
-                              )}
-                              {deliverable.checks?.feedback && (
-                                <div className="mt-2 p-2 bg-muted rounded text-sm">
-                                  <strong>Feedback:</strong> {deliverable.checks.feedback}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex space-x-2">
-                              {deliverable.url && (
-                                <Button variant="ghost" size="sm" asChild>
-                                  <a href={deliverable.url} target="_blank" rel="noopener noreferrer">
-                                    <Eye className="h-4 w-4" />
-                                  </a>
-                                </Button>
-                              )}
-                              {canReviewMilestones && milestone.state === 'SUBMITTED' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setReviewData({ ...reviewData, milestoneId: milestone.id });
-                                    setIsReviewModalOpen(true);
-                                  }}
-                                >
-                                  Review
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        <DeliverableViewer
+                          key={deliverable.id}
+                          deliverable={{
+                            ...deliverable,
+                            milestone: {
+                              ...milestone,
+                              deal: deal,
+                            },
+                          }}
+                          onUpdate={fetchDealDetails}
+                          showReviewActions={canReviewMilestones}
+                        />
                       ))}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="mx-auto h-8 w-8 mb-2" />
                       <p>No deliverables yet</p>
+                      {userProfile?.role === 'CREATOR' && deal.creator_id === userProfile.id && milestone.state === 'PENDING' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => navigate(`/milestones/${milestone.id}/submit`)}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Submit Deliverable
+                        </Button>
+                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="space-y-4">
+          <DealStatusTimeline deal={deal} />
         </TabsContent>
 
         <TabsContent value="details" className="space-y-4">
