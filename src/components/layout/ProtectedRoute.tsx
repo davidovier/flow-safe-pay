@@ -18,6 +18,24 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         return;
       }
 
+      // Check if user profile is deleted/missing (additional safeguard)
+      if (user && !userProfile) {
+        console.log('ProtectedRoute: User authenticated but no profile found - likely deleted account');
+        navigate('/auth', { replace: true });
+        return;
+      }
+
+      // Check if account is marked as deleted
+      if (userProfile && (
+        userProfile.email === 'DELETED_ACCOUNT' || 
+        userProfile.first_name === '[DELETED]' ||
+        userProfile.kyc_status === 'DELETED'
+      )) {
+        console.log('ProtectedRoute: Deleted account detected, redirecting to auth');
+        navigate('/auth', { replace: true });
+        return;
+      }
+
       if (allowedRoles && userProfile && !allowedRoles.includes(userProfile.role)) {
         navigate('/', { replace: true });
         return;

@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile and handle deleted accounts
           setTimeout(async () => {
             await fetchUserProfile(session.user.id);
           }, 0);
@@ -81,6 +81,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        
+        // If user profile doesn't exist (deleted account), sign them out
+        if (error.code === 'PGRST116') { // No rows returned
+          console.log('User profile not found - account may have been deleted. Signing out...');
+          toast({
+            title: "Account Not Found",
+            description: "This account has been deleted. You have been signed out.",
+            variant: "destructive"
+          });
+          await supabase.auth.signOut();
+        }
+        return;
+      }
+
+      // Check if account is marked as deleted
+      if (data?.email === 'DELETED_ACCOUNT' || data?.first_name === '[DELETED]') {
+        console.log('Account marked as deleted. Signing out...');
+        toast({
+          title: "Account Deleted",
+          description: "This account has been deleted. You have been signed out.",
+          variant: "destructive"
+        });
+        await supabase.auth.signOut();
         return;
       }
 
@@ -91,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -102,14 +125,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Error signing in",
         description: error.message,
       });
-    } else {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
-      });
+      return { error };
     }
 
-    return { error };
+    // Check if this is a deleted account immediately after successful auth
+    if (data?.user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('email, first_name, kyc_status')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        // Account doesn't exist - was completely deleted
+        await supabase.auth.signOut();
+        toast({
+          variant: "destructive",
+          title: "Account Not Found",
+          description: "This account has been deleted. Please create a new account if needed.",
+        });
+        return { error: new Error('Account has been deleted') };
+      }
+
+      if (profile.email === 'DELETED_ACCOUNT' || profile.first_name === '[DELETED]' || profile.kyc_status === 'DELETED') {
+        // Account is marked as deleted
+        await supabase.auth.signOut();
+        toast({
+          variant: "destructive",
+          title: "Account Deleted", 
+          description: "This account has been deleted. Please create a new account if needed.",
+        });
+        return { error: new Error('Account has been deleted') };
+      }
+    }
+
+    toast({
+      title: "Welcome back!",
+      description: "You have successfully signed in.",
+    });
+
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, userData?: { first_name?: string; last_name?: string; role?: UserRole }) => {
@@ -356,16 +411,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           deletionErrors.push('events_anonymization');
         }
 
-        // Finally, delete user profile
-        const { error: userDeleteError } = await supabase
+        // Instead of deleting, mark user as deleted (GDPR compliant - removes all personal data)
+        const { error: userUpdateError } = await supabase
           .from('users')
-          .delete()
+          .update({
+            email: 'DELETED_ACCOUNT',
+            first_name: '[DELETED]',
+            last_name: '[DELETED]',
+            country: null,
+            stripe_account_id: null,
+            kyc_status: 'DELETED',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', user.id);
         
-        if (userDeleteError) {
-          console.error('Error deleting user profile:', userDeleteError);
+        if (userUpdateError) {
+          console.error('Error marking user as deleted:', userUpdateError);
           deletionErrors.push('user_profile');
-          throw userDeleteError;
+          throw userUpdateError;
         }
 
       } catch (deletionError) {
@@ -397,10 +460,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Show appropriate message based on deletion completeness
       const hasErrors = deletionErrors.length > 0;
       toast({
-        title: "Account Data Deleted",
+        title: "Account Deleted Successfully",
         description: hasErrors
-          ? "Your account data has been deleted, but some related data may remain. The login account still exists due to security limitations. For complete removal, please contact support."
-          : "Your account data has been permanently deleted. Due to security limitations, your login credentials still exist but your account is now empty. You can create a new account with the same email.",
+          ? "Your account has been deleted, but some related data may remain. If you try to log in again, you will be immediately signed out. You can create a new account with the same email."
+          : "Your account has been permanently deleted and deactivated. All personal data has been removed. If you try to log in again, you will be immediately signed out. You can create a new account with the same email.",
         variant: hasErrors ? "destructive" : "default"
       });
 

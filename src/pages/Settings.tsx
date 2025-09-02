@@ -374,9 +374,8 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground">
                       <strong>Data Protection Notice:</strong> Your account deletion is GDPR compliant. 
                       All personal data will be permanently deleted and audit logs will be anonymized. 
-                      <strong>Important:</strong> Due to security limitations, your login credentials may remain 
-                      in the authentication system, but your account will be completely empty. 
-                      You can create a new account with the same email after deletion.
+                      Your account will be deactivated and marked as deleted - if you attempt to log in again, 
+                      you will be immediately signed out. You can create a new account with the same email after deletion.
                     </p>
                   </div>
                 </div>
