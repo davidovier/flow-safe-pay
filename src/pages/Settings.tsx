@@ -14,7 +14,7 @@ import { KYCVerificationForm } from '@/components/kyc/KYCVerificationForm';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
-  const { userProfile, updateProfile, signOut } = useAuth();
+  const { userProfile, updateProfile, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -56,40 +56,24 @@ export default function Settings() {
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/users/${userProfile.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          confirmEmail: deleteData.confirmEmail,
-          reason: deleteData.reason
-        }),
-      });
+      const { error } = await deleteAccount(
+        deleteData.confirmEmail,
+        deleteData.reason
+      );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete account');
+      if (error) {
+        throw error;
       }
 
-      // Account deleted successfully
-      toast({
-        title: "Account Deleted",
-        description: "Your account and all associated data have been permanently deleted.",
-      });
-
-      // Sign out and redirect
-      await signOut();
+      // Account deleted successfully - navigate to home
       navigate('/');
     } catch (error) {
-      toast({
-        title: "Delete Failed",
-        description: error instanceof Error ? error.message : "Failed to delete account. Please try again.",
-        variant: "destructive",
-      });
+      // Error handling is already done in the AuthContext
+      console.error('Delete account error:', error);
     } finally {
       setDeleteLoading(false);
+      setIsDeleteModalOpen(false);
+      setDeleteData({ confirmEmail: '', reason: '' });
     }
   };
 
