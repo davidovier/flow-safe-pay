@@ -1,0 +1,12 @@
+{
+  "moderate": true,
+  "high": true,
+  "critical": true,
+  "allowlist": [],
+  "skipAudit": [
+    "1088",
+    "1091"
+  ],
+  "report-type": "summary",
+  "summary-fail-level": "high"
+}

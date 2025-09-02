@@ -9,6 +9,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 
 import { authRoutes } from './routes/auth.js';
+import { projectRoutes } from './routes/projects.js';
 import { dealRoutes } from './routes/deals.js';
 import { milestoneRoutes } from './routes/milestones.js';
 import { webhookRoutes } from './routes/webhooks.js';
@@ -125,6 +126,7 @@ async function startServer() {
     // Register routes
     await fastify.register(authRoutes, { prefix: '/auth' });
     await fastify.register(userRoutes, { prefix: '/users' });
+    await fastify.register(projectRoutes, { prefix: '/projects' });
     await fastify.register(dealRoutes, { prefix: '/deals' });
     await fastify.register(milestoneRoutes, { prefix: '/milestones' });
     await fastify.register(payoutRoutes, { prefix: '/payouts' });
