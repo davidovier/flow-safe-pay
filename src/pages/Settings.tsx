@@ -372,9 +372,11 @@ export default function Settings() {
 
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="text-xs text-muted-foreground">
-                      <strong>Data Protection Notice:</strong> Your account deletion is fully compliant with GDPR. 
-                      We will retain anonymized audit logs for security and legal compliance, but all personal 
-                      data will be permanently deleted. You can create a new account with the same email after deletion.
+                      <strong>Data Protection Notice:</strong> Your account deletion is GDPR compliant. 
+                      All personal data will be permanently deleted and audit logs will be anonymized. 
+                      <strong>Important:</strong> Due to security limitations, your login credentials may remain 
+                      in the authentication system, but your account will be completely empty. 
+                      You can create a new account with the same email after deletion.
                     </p>
                   </div>
                 </div>

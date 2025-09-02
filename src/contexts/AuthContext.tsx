@@ -189,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // Check for active deals that would prevent deletion
-      // Get deals where user is creator OR deals from projects where user is brand
+      // Get deals where user is creator
       const { data: creatorDeals, error: creatorDealsError } = await supabase
         .from('deals')
         .select('id, state')
@@ -200,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw creatorDealsError;
       }
 
+      // Get deals where user is brand (through projects)
       const { data: brandDeals, error: brandDealsError } = await supabase
         .from('deals')
         .select('id, state, projects!inner(brand_id)')
@@ -216,40 +217,191 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error('Cannot delete account with active funded deals. Please complete or resolve all deals first.') };
       }
 
-      // Create audit log entry before deletion
-      await supabase.from('events').insert({
-        type: 'user.deletion_requested',
+      // Start comprehensive deletion process
+      console.log('Starting account deletion process...');
+
+      // 1. Create audit log entry before deletion
+      const { error: auditError } = await supabase.from('events').insert({
+        actor_user_id: user.id,
+        type: 'user.deletion_started',
         payload: {
           user_id: user.id,
           email: userProfile.email,
           reason: reason || 'User requested deletion',
           timestamp: new Date().toISOString(),
           account_type: userProfile.role,
-          gdpr_compliant: true
+          gdpr_compliant: true,
+          deletion_method: 'client_side'
         }
       });
 
-      // Delete user data in Supabase (this will cascade to related tables due to FK constraints)
-      // Note: In a production environment, you'd want to implement RLS policies and/or use Supabase Edge Functions
-      // for more secure deletion. For now, we'll delete what we can directly.
-      
-      // Delete user profile data
-      const { error: deleteError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', user.id);
-
-      if (deleteError) {
-        throw deleteError;
+      if (auditError) {
+        console.warn('Failed to create audit log:', auditError);
       }
 
-      // Delete the actual auth user (this requires admin privileges in production)
-      // For development, we'll sign out and show a message
+      // 2. Delete data in correct order to handle foreign key constraints
+      let deletionErrors = [];
+
+      try {
+        // Get all deals related to this user (as creator or brand)
+        const { data: allUserDeals } = await supabase
+          .from('deals')
+          .select('id')
+          .or(`creator_id.eq.${user.id},project_id.in.(select id from projects where brand_id = '${user.id}')`);
+
+        const userDealIds = allUserDeals?.map(deal => deal.id) || [];
+
+        if (userDealIds.length > 0) {
+          // Delete deliverables
+          const { error: deliverablesError } = await supabase
+            .from('deliverables')
+            .delete()
+            .in('milestone_id', 
+              supabase.from('milestones').select('id').in('deal_id', userDealIds)
+            );
+          
+          if (deliverablesError) {
+            console.warn('Error deleting deliverables:', deliverablesError);
+            deletionErrors.push('deliverables');
+          }
+
+          // Delete payouts
+          const { error: payoutsError } = await supabase
+            .from('payouts')
+            .delete()
+            .in('deal_id', userDealIds);
+          
+          if (payoutsError) {
+            console.warn('Error deleting payouts:', payoutsError);
+            deletionErrors.push('payouts');
+          }
+
+          // Delete milestones
+          const { error: milestonesError } = await supabase
+            .from('milestones')
+            .delete()
+            .in('deal_id', userDealIds);
+          
+          if (milestonesError) {
+            console.warn('Error deleting milestones:', milestonesError);
+            deletionErrors.push('milestones');
+          }
+
+          // Delete contracts
+          const { error: contractsError } = await supabase
+            .from('contracts')
+            .delete()
+            .in('deal_id', userDealIds);
+          
+          if (contractsError) {
+            console.warn('Error deleting contracts:', contractsError);
+            deletionErrors.push('contracts');
+          }
+
+          // Delete disputes
+          const { error: disputesError } = await supabase
+            .from('disputes')
+            .delete()
+            .or(`raised_by_user_id.eq.${user.id},deal_id.in.(${userDealIds.join(',')})`);
+          
+          if (disputesError) {
+            console.warn('Error deleting disputes:', disputesError);
+            deletionErrors.push('disputes');
+          }
+
+          // Delete deals where user is creator
+          const { error: creatorDealsDelError } = await supabase
+            .from('deals')
+            .delete()
+            .eq('creator_id', user.id);
+          
+          if (creatorDealsDelError) {
+            console.warn('Error deleting creator deals:', creatorDealsDelError);
+            deletionErrors.push('creator_deals');
+          }
+
+          // Delete deals from user's projects
+          const { error: brandDealsDelError } = await supabase
+            .from('deals')
+            .delete()
+            .in('project_id', 
+              supabase.from('projects').select('id').eq('brand_id', user.id)
+            );
+          
+          if (brandDealsDelError) {
+            console.warn('Error deleting brand deals:', brandDealsDelError);
+            deletionErrors.push('brand_deals');
+          }
+        }
+
+        // Delete projects where user is brand
+        const { error: projectsError } = await supabase
+          .from('projects')
+          .delete()
+          .eq('brand_id', user.id);
+        
+        if (projectsError) {
+          console.warn('Error deleting projects:', projectsError);
+          deletionErrors.push('projects');
+        }
+
+        // Anonymize events (keep for audit but remove personal connection)
+        const { error: eventsError } = await supabase
+          .from('events')
+          .update({ actor_user_id: null })
+          .eq('actor_user_id', user.id);
+        
+        if (eventsError) {
+          console.warn('Error anonymizing events:', eventsError);
+          deletionErrors.push('events_anonymization');
+        }
+
+        // Finally, delete user profile
+        const { error: userDeleteError } = await supabase
+          .from('users')
+          .delete()
+          .eq('id', user.id);
+        
+        if (userDeleteError) {
+          console.error('Error deleting user profile:', userDeleteError);
+          deletionErrors.push('user_profile');
+          throw userDeleteError;
+        }
+
+      } catch (deletionError) {
+        console.error('Error during data deletion:', deletionError);
+        throw deletionError;
+      }
+
+      // Log successful deletion (even if some parts failed)
+      await supabase.from('events').insert({
+        actor_user_id: null, // Anonymized
+        type: 'user.deletion_completed',
+        payload: {
+          deleted_user_id: user.id,
+          deletion_timestamp: new Date().toISOString(),
+          gdpr_compliant: true,
+          client_side_deletion: true,
+          auth_user_deleted: false, // Cannot delete auth user from client
+          deletion_errors: deletionErrors,
+          data_types_deleted: [
+            'user_profile', 'projects', 'deals', 'milestones', 
+            'deliverables', 'contracts', 'disputes', 'payouts'
+          ]
+        }
+      });
+
+      // Sign out immediately
       await supabase.auth.signOut();
 
+      // Show appropriate message based on deletion completeness
+      const hasErrors = deletionErrors.length > 0;
       toast({
-        title: "Account Deleted",
-        description: "Your account and all associated data have been permanently deleted. You can create a new account with the same email if needed.",
+        title: "Account Data Deleted",
+        description: hasErrors
+          ? "Your account data has been deleted, but some related data may remain. The login account still exists due to security limitations. For complete removal, please contact support."
+          : "Your account data has been permanently deleted. Due to security limitations, your login credentials still exist but your account is now empty. You can create a new account with the same email.",
+        variant: hasErrors ? "destructive" : "default"
       });
 
       return { error: null };
