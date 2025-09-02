@@ -345,7 +345,7 @@ Modern influencer partnerships face unique challenges that traditional payment m
 - Revision rounds and approval timelines
 
 **Quality Standards Template**:
-```
+\`\`\`
 CONTENT REQUIREMENTS:
 - Platform: Instagram + Instagram Stories
 - Format: 1 feed post + 5 story slides
@@ -358,7 +358,7 @@ APPROVAL CRITERIA:
 - Technical quality: HD resolution, clear audio
 - Engagement rate: Minimum baseline performance
 - Posting timeline: Within 48 hours of approval
-```
+\`\`\`
 
 ### 3. Contract Integration
 

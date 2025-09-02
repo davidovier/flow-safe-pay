@@ -52,8 +52,15 @@ export const CSP_DIRECTIVES = {
 
 export function generateCSPHeader(): string {
   // Disable CSP in development for preview compatibility
-  if (import.meta.env.DEV) {
-    return "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;";
+  try {
+    if (import.meta.env?.DEV) {
+      return "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;";
+    }
+  } catch (e) {
+    // Fallback for environments where import.meta.env is not available
+    if (process.env.NODE_ENV === 'development') {
+      return "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;";
+    }
   }
   
   return Object.entries(CSP_DIRECTIVES)
@@ -61,7 +68,15 @@ export function generateCSPHeader(): string {
     .join('; ');
 }
 
-export const SECURITY_HEADERS = import.meta.env.DEV ? {
+const isDev = (() => {
+  try {
+    return import.meta.env?.DEV;
+  } catch (e) {
+    return process.env.NODE_ENV === 'development';
+  }
+})();
+
+export const SECURITY_HEADERS = isDev ? {
   // Development headers - minimal restrictions for preview compatibility
   'Content-Security-Policy': generateCSPHeader(),
   'X-Frame-Options': 'ALLOWALL',
