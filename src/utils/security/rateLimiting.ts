@@ -205,13 +205,13 @@ export const rateLimiters = {
   auth: new AdvancedRateLimiter(
     {
       windowMs: 15 * 60 * 1000, // 15 minutes
-      maxRequests: 5 // 5 attempts per 15 minutes
+      maxRequests: 15 // 15 attempts per 15 minutes
     },
     {
       shortWindowMs: 1 * 60 * 1000, // 1 minute
-      shortWindowLimit: 2, // 2 attempts per minute
+      shortWindowLimit: 10, // 10 attempts per minute
       longWindowMs: 60 * 60 * 1000, // 1 hour
-      longWindowLimit: 10 // 10 attempts per hour
+      longWindowLimit: 20 // 20 attempts per hour
     },
     {
       suspiciousThreshold: 10,
