@@ -403,46 +403,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-primary text-primary-foreground">
-        <div className="container mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Get Paid Instantly?
-          </h2>
-          <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Join thousands of creators and brands who trust FlowPay for secure, instant payments
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              variant="secondary" 
-              className="text-lg px-8"
-              onClick={() => navigate('/auth')}
-            >
-              Start Free Today
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="text-lg border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-              onClick={handleDemoClick}
-            >
-              <Play className="mr-2 h-5 w-5" />
-              Watch Demo
-            </Button>
-          </div>
-          <div className="flex flex-col items-center gap-2 mt-6">
-            <p className="text-sm opacity-75">
-              No setup fees • No monthly fees • Only pay when you get paid
-            </p>
-            <div className="flex items-center gap-2 text-sm opacity-90">
-              <Shield className="h-4 w-4" />
-              <span>30-day money-back guarantee</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* FAQ Section */}
       <section className="py-20 px-4 bg-muted/20">
@@ -521,9 +481,9 @@ export default function Landing() {
           {/* Main Footer Content */}
           <div className="py-16 px-4">
             <div className="container mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 mb-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
                 {/* Brand Section */}
-                <div className="lg:col-span-2">
+                <div className="sm:col-span-2 md:col-span-3 lg:col-span-2">
                   <div className="flex items-center space-x-3 mb-6">
                     <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                       <Wallet className="h-6 w-6 text-white" />
@@ -538,7 +498,7 @@ export default function Landing() {
                   {/* Social Links */}
                   <div className="space-y-4">
                     <h5 className="font-semibold text-sm uppercase tracking-wider text-gray-400">Follow Us</h5>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center flex-wrap gap-4">
                       <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors group">
                         <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
@@ -615,7 +575,7 @@ export default function Landing() {
               {/* Bottom Section */}
               <div className="border-t border-gray-800 pt-8">
                 <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-                  <div className="flex flex-col sm:flex-row items-center gap-6 text-sm text-gray-400">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-gray-400">
                     <p>© 2024 FlowPay Inc. All rights reserved.</p>
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-2">
@@ -626,7 +586,7 @@ export default function Landing() {
                   </div>
                   
                   {/* Compliance Badges */}
-                  <div className="flex items-center gap-6">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <div className="w-8 h-8 bg-green-900 rounded-lg flex items-center justify-center">
                         <Shield className="h-4 w-4 text-green-400" />
