@@ -5,6 +5,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Referrer-Policy": "strict-origin-when-cross-origin"
 };
 
 serve(async (req) => {
@@ -101,11 +106,17 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error creating payment intent:", error);
+    
+    // Security: Don't leak sensitive error details
+    const safeError = error instanceof Error && error.message.includes("authenticated") 
+      ? "Authentication required" 
+      : "Payment processing error";
+      
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: safeError }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: error instanceof Error && error.message.includes("authenticated") ? 401 : 500,
       }
     );
   }

@@ -5,6 +5,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Referrer-Policy": "strict-origin-when-cross-origin"
 };
 
 serve(async (req) => {
@@ -13,6 +18,25 @@ serve(async (req) => {
   }
 
   try {
+    // Security: Validate request timestamp to prevent replay attacks
+    const timestamp = req.headers.get("stripe-timestamp");
+    if (timestamp) {
+      const requestTime = parseInt(timestamp);
+      const currentTime = Math.floor(Date.now() / 1000);
+      const tolerance = 300; // 5 minutes
+      
+      if (Math.abs(currentTime - requestTime) > tolerance) {
+        console.warn("Webhook timestamp outside tolerance window");
+        return new Response(
+          JSON.stringify({ error: "Request timestamp invalid" }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
+      }
+    }
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -28,11 +52,47 @@ serve(async (req) => {
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
     if (!signature || !webhookSecret) {
-      throw new Error("Missing signature or webhook secret");
+      console.error("Security: Missing signature or webhook secret");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
     }
 
     // Verify webhook signature
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      console.error("Security: Webhook signature verification failed:", err);
+      return new Response(
+        JSON.stringify({ error: "Invalid signature" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
+    }
+
+    console.log("Received webhook event:", event.type, "ID:", event.id);
+
+    // Security: Check for duplicate events to prevent replay
+    const { data: existingEvent } = await supabaseClient
+      .from('events')
+      .select('id')
+      .eq('payload->>stripe_event_id', event.id)
+      .single();
+
+    if (existingEvent) {
+      console.warn("Security: Duplicate webhook event detected:", event.id);
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
 
     console.log("Received webhook event:", event.type);
 
@@ -79,8 +139,14 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Webhook error:", error);
+    
+    // Security: Don't leak internal error details
+    const safeError = error instanceof Error && error.message.includes("signature") 
+      ? "Invalid signature" 
+      : "Processing error";
+      
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: safeError }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
