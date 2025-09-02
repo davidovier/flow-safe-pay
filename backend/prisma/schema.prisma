@@ -19,6 +19,7 @@ enum KycStatus {
   APPROVED
   REJECTED
   REQUIRED
+  DELETED
 }
 
 enum DealState {
@@ -66,6 +67,7 @@ model User {
   country         String?
   stripeAccountId String?
   kycStatus       KycStatus @default(PENDING)
+  deletedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -76,6 +78,9 @@ model User {
   events          Event[]      @relation("UserEvents")
 
   @@map("users")
+  @@index([email])
+  @@index([kycStatus])
+  @@index([deletedAt])
 }
 
 model Project {
@@ -230,14 +235,4 @@ model Event {
   @@map("events")
 }
 
-// Indexes for performance
-@@index([User.email])
-@@index([User.stripeAccountId])
-@@index([Deal.state])
-@@index([Deal.creatorId])
-@@index([Deal.projectId])
-@@index([Milestone.state])
-@@index([Milestone.dueAt])
-@@index([Payout.status])
-@@index([Event.type])
-@@index([Event.createdAt])
+// Global indexes removed - they should be defined within model blocks

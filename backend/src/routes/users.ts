@@ -1,14 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { createSecurityMiddleware } from '../middleware/security.js';
 
 export async function userRoutes(fastify: FastifyInstance) {
   
-  const requireAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      await request.jwtVerify();
-    } catch (err) {
-      reply.send(err);
-    }
-  };
+  const { requireAuth } = await createSecurityMiddleware(fastify);
 
   // Get user profile
   fastify.get('/:userId', {
@@ -272,9 +267,19 @@ export async function userRoutes(fastify: FastifyInstance) {
           data: { actorUserId: null }
         });
 
-        // 9. Finally delete the user
-        await tx.user.delete({
-          where: { id: userId }
+        // 9. Mark user as deleted (GDPR compliant - removes all personal data but keeps record for security)
+        const deletedAt = new Date();
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            email: `DELETED_${userId}@deleted.account`, // Unique email to allow new registrations with same email
+            hashedPassword: null, // Remove password hash completely
+            country: null,
+            stripeAccountId: null,
+            kycStatus: 'DELETED',
+            deletedAt: deletedAt,
+            updatedAt: deletedAt,
+          },
         });
       });
 

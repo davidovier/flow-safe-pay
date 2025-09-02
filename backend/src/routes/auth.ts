@@ -53,16 +53,37 @@ export async function authRoutes(fastify: FastifyInstance) {
     try {
       const { email, password, role, country } = registerSchema.parse(request.body);
 
-      // Check if user already exists
+      // Check if active user already exists with this email
       const existingUser = await fastify.prisma.user.findUnique({
         where: { email },
       });
 
-      if (existingUser) {
+      if (existingUser && existingUser.kycStatus !== 'DELETED' && !existingUser.deletedAt) {
         return reply.status(409).send({
           error: 'Conflict',
           message: 'User with this email already exists',
         });
+      }
+
+      // If a deleted account exists with this email, we need to handle it
+      if (existingUser && (existingUser.kycStatus === 'DELETED' || existingUser.deletedAt)) {
+        // Log the reuse of deleted account email
+        await fastify.prisma.event.create({
+          data: {
+            actorUserId: null,
+            type: 'user.deleted_email_reused',
+            payload: {
+              previousDeletedUserId: existingUser.id,
+              newRegistrationEmail: email,
+              newRole: role,
+              timestamp: new Date().toISOString(),
+              ipAddress: request.ip,
+            },
+          },
+        });
+
+        fastify.log.info(`Deleted account email being reused: ${email} (Previous User ID: ${existingUser.id})`);
+        // Continue with registration - this is allowed
       }
 
       // Hash password
@@ -175,6 +196,31 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
+      // SECURITY: Check if account is deleted
+      if (user.kycStatus === 'DELETED' || user.deletedAt) {
+        // Log attempted access to deleted account
+        await fastify.prisma.event.create({
+          data: {
+            actorUserId: null, // Don't link to deleted user
+            type: 'security.deleted_account_access_attempt',
+            payload: {
+              deletedUserId: user.id,
+              attemptEmail: email,
+              timestamp: new Date().toISOString(),
+              ipAddress: request.ip,
+              userAgent: request.headers['user-agent'] || 'Unknown',
+            },
+          },
+        });
+
+        fastify.log.warn(`Deleted account login attempt: ${email} (User ID: ${user.id})`);
+        
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'This account has been deleted and cannot be accessed',
+        });
+      }
+
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.hashedPassword);
       if (!isValidPassword) {
@@ -278,6 +324,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           country: true,
           stripeAccountId: true,
           createdAt: true,
+          deletedAt: true,
         },
       });
 
@@ -285,6 +332,30 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({
           error: 'Not Found',
           message: 'User not found',
+        });
+      }
+
+      // SECURITY: Check if account is deleted
+      if (user.kycStatus === 'DELETED' || user.deletedAt) {
+        // Log attempted access to deleted account via token
+        await fastify.prisma.event.create({
+          data: {
+            actorUserId: null,
+            type: 'security.deleted_account_token_access_attempt',
+            payload: {
+              deletedUserId: user.id,
+              timestamp: new Date().toISOString(),
+              ipAddress: request.ip,
+              userAgent: request.headers['user-agent'] || 'Unknown',
+            },
+          },
+        });
+
+        fastify.log.warn(`Deleted account token access attempt: User ID ${user.id}`);
+        
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'This account has been deleted and cannot be accessed',
         });
       }
 
