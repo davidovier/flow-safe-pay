@@ -5,21 +5,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, User, CreditCard, Shield, Bell } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Shield, Bell, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { KYCVerificationForm } from '@/components/kyc/KYCVerificationForm';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
-  const { userProfile, updateProfile } = useAuth();
+  const { userProfile, updateProfile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState({
     first_name: userProfile?.first_name || '',
     last_name: userProfile?.last_name || '',
     country: userProfile?.country || '',
+  });
+  const [deleteData, setDeleteData] = useState({
+    confirmEmail: '',
+    reason: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,6 +48,48 @@ export default function Settings() {
       case 'pending': return 'warning' as any;
       case 'rejected': return 'destructive';
       default: return 'secondary';
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!userProfile?.id) return;
+
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`/api/users/${userProfile.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          confirmEmail: deleteData.confirmEmail,
+          reason: deleteData.reason
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete account');
+      }
+
+      // Account deleted successfully
+      toast({
+        title: "Account Deleted",
+        description: "Your account and all associated data have been permanently deleted.",
+      });
+
+      // Sign out and redirect
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -251,6 +302,120 @@ export default function Settings() {
                 Configure
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone - Delete Account */}
+        <Card className="border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+            <CardDescription>
+              Permanently delete your account and all associated data. This action cannot be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <p className="font-medium text-destructive">Delete Account</p>
+                  <p className="text-sm text-muted-foreground">
+                    This will permanently delete your account, including:
+                  </p>
+                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                    <li>• All personal information and profile data</li>
+                    <li>• Complete deal and transaction history</li>
+                    <li>• All projects, contracts, and deliverables</li>
+                    <li>• Payment information (Stripe accounts remain with Stripe)</li>
+                    <li>• All associated files and documents</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    <strong>Note:</strong> You cannot delete your account if you have active funded deals. 
+                    Please complete or resolve all deals first.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete My Account
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    Delete Account
+                  </DialogTitle>
+                  <DialogDescription className="text-left">
+                    This action is permanent and cannot be undone. All your data will be permanently deleted 
+                    in compliance with GDPR regulations.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-email">
+                      Confirm your email address to continue
+                    </Label>
+                    <Input
+                      id="confirm-email"
+                      type="email"
+                      placeholder={userProfile?.email}
+                      value={deleteData.confirmEmail}
+                      onChange={(e) => setDeleteData({...deleteData, confirmEmail: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-reason">
+                      Why are you deleting your account? (optional)
+                    </Label>
+                    <Textarea
+                      id="delete-reason"
+                      placeholder="Help us improve FlowPay by sharing why you're leaving..."
+                      value={deleteData.reason}
+                      onChange={(e) => setDeleteData({...deleteData, reason: e.target.value})}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Data Protection Notice:</strong> Your account deletion is fully compliant with GDPR. 
+                      We will retain anonymized audit logs for security and legal compliance, but all personal 
+                      data will be permanently deleted. You can create a new account with the same email after deletion.
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter className="flex gap-2 sm:gap-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setDeleteData({ confirmEmail: '', reason: '' });
+                    }}
+                    disabled={deleteLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteLoading || deleteData.confirmEmail !== userProfile?.email}
+                  >
+                    {deleteLoading ? 'Deleting...' : 'Delete Forever'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
       </div>
