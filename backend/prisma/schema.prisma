@@ -78,6 +78,14 @@ enum PayoutStatus {
   CANCELED
 }
 
+enum InvoiceStatus {
+  GENERATED
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
 model User {
   id                      String    @id @default(cuid())
   email                   String    @unique
@@ -144,6 +152,7 @@ model Deal {
   contract     Contract?
   disputes     Dispute[]
   payouts      Payout[]
+  invoices     Invoice[]
   events       Event[]
 
   @@map("deals")
@@ -167,6 +176,7 @@ model Milestone {
   deal         Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
   deliverables Deliverable[]
   payouts      Payout[]
+  invoices     Invoice[]
 
   @@map("milestones")
 }
@@ -271,6 +281,35 @@ model DisputeResolution {
   @@map("dispute_resolutions")
 }
 
+model Invoice {
+  id            String        @id @default(cuid())
+  dealId        String
+  milestoneId   String?
+  invoiceNumber String        @unique
+  amount        Int           // Total amount in cents including tax
+  currency      String        @default("usd")
+  taxAmount     Int           @default(0) // Tax amount in cents
+  taxType       String?       // VAT, GST, NONE
+  issueDate     DateTime
+  dueDate       DateTime?
+  status        InvoiceStatus @default(GENERATED)
+  pdfUrl        String?       // URL to generated PDF
+  sentAt        DateTime?
+  paidAt        DateTime?
+  metadata      Json?         // Additional invoice data (tax rates, addresses, etc.)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relationships
+  deal          Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  milestone     Milestone?    @relation(fields: [milestoneId], references: [id])
+
+  @@map("invoices")
+  @@index([dealId])
+  @@index([status])
+  @@index([issueDate])
+}
+
 model Payout {
   id           String          @id @default(cuid())
   dealId       String
@@ -295,12 +334,14 @@ model Payout {
 model Event {
   id          String   @id @default(cuid())
   actorUserId String?
+  dealId      String?
   type        String   // e.g., "deal.created", "milestone.approved"
   payload     Json     // Event data
   createdAt   DateTime @default(now())
 
   // Relationships
   actor       User?    @relation("UserEvents", fields: [actorUserId], references: [id])
+  deal        Deal?    @relation(fields: [dealId], references: [id])
 
   @@map("events")
 }
