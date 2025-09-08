@@ -108,6 +108,7 @@ model User {
   disputeResponses  DisputeResponse[]   @relation("DisputeResponses")
   disputeResolutions DisputeResolution[] @relation("DisputeResolutions")
   events            Event[]             @relation("UserEvents")
+  refreshTokens     RefreshToken[]      @relation("UserRefreshTokens")
 
   @@map("users")
   @@index([email])
@@ -344,6 +345,29 @@ model Event {
   deal        Deal?    @relation(fields: [dealId], references: [id])
 
   @@map("events")
+}
+
+// Refresh token storage for JWT refresh functionality
+model RefreshToken {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique @map("token_hash") // SHA-256 hash of the token
+  userId      String   @map("user_id")
+  email       String
+  role        String
+  deviceId    String?  @map("device_id") // Optional device identifier
+  userAgent   String?  @map("user_agent") // Browser/app user agent
+  ipAddress   String?  @map("ip_address") // IP address when token was created
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastUsed    DateTime @default(now()) @map("last_used")
+
+  // Relationships
+  user        User     @relation("UserRefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([tokenHash])
 }
 
 // Global indexes removed - they should be defined within model blocks

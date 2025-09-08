@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
+import '../src/global.css';
 
 import { store } from '../src/store/store';
 import { AuthProvider } from '../src/contexts/AuthContext';

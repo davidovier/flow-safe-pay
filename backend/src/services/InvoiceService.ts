@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { logger } from '../utils/logger.js';
+import { s3Service } from '../lib/s3.js';
 
 interface InvoiceData {
   invoiceNumber: string;
@@ -369,11 +370,31 @@ export class InvoiceService {
   }
 
   private async uploadToS3(buffer: Buffer, key: string): Promise<string> {
-    // Simplified S3 upload - in real implementation would use AWS SDK
-    // For now, return a mock URL
-    const mockUrl = `https://flowpay-invoices.s3.amazonaws.com/${key}`;
-    logger.info(`Mock S3 upload: ${key} -> ${mockUrl}`);
-    return mockUrl;
+    try {
+      const uploadResult = await s3Service.uploadFile({
+        key,
+        body: buffer,
+        contentType: 'application/pdf',
+        metadata: {
+          purpose: 'invoice',
+          generated: new Date().toISOString(),
+        }
+      });
+
+      logger.info(`Invoice PDF uploaded to S3: ${key} -> ${uploadResult.url}`);
+      return uploadResult.url;
+    } catch (error) {
+      logger.error('Failed to upload invoice PDF to S3', { error, key });
+      
+      // Fallback to a local mock URL for development
+      if (process.env.NODE_ENV === 'development') {
+        const mockUrl = `https://flowpay-invoices.s3.amazonaws.com/${key}`;
+        logger.warn(`Using mock URL for development: ${mockUrl}`);
+        return mockUrl;
+      }
+      
+      throw new Error('Failed to upload invoice PDF');
+    }
   }
 
   async getInvoiceById(invoiceId: string): Promise<any> {

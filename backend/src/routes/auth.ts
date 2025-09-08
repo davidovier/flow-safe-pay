@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { UserRole } from '@prisma/client';
+import { RefreshTokenService } from '../services/auth/RefreshTokenService.js';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -15,7 +16,12 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
+const refreshSchema = z.object({
+  refreshToken: z.string(),
+});
+
 export async function authRoutes(fastify: FastifyInstance) {
+  const refreshTokenService = new RefreshTokenService(fastify.prisma);
   // Register new user
   fastify.post('/register', {
     schema: {
@@ -45,6 +51,7 @@ export async function authRoutes(fastify: FastifyInstance) {
               },
             },
             accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
           },
         },
       },
@@ -114,6 +121,15 @@ export async function authRoutes(fastify: FastifyInstance) {
         role: user.role,
       });
 
+      // Generate refresh token
+      const refreshToken = await refreshTokenService.generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        userAgent: request.headers['user-agent'],
+        ipAddress: request.ip,
+      });
+
       // Log registration event
       await fastify.prisma.event.create({
         data: {
@@ -130,6 +146,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       return reply.status(201).send({
         user,
         accessToken,
+        refreshToken,
       });
 
     } catch (error) {
@@ -176,6 +193,7 @@ export async function authRoutes(fastify: FastifyInstance) {
               },
             },
             accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
           },
         },
       },
@@ -237,6 +255,15 @@ export async function authRoutes(fastify: FastifyInstance) {
         role: user.role,
       });
 
+      // Generate refresh token
+      const refreshToken = await refreshTokenService.generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        userAgent: request.headers['user-agent'],
+        ipAddress: request.ip,
+      });
+
       // Log login event
       await fastify.prisma.event.create({
         data: {
@@ -258,6 +285,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           country: user.country,
         },
         accessToken,
+        refreshToken,
       });
 
     } catch (error) {
@@ -370,17 +398,89 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Refresh token endpoint (future implementation)
+  // Refresh token endpoint
   fastify.post('/refresh', {
     schema: {
-      description: 'Refresh access token',
+      description: 'Refresh access token using refresh token',
       tags: ['Authentication'],
+      body: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                role: { type: 'string' },
+                kycStatus: { type: 'string' },
+              },
+            },
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+          },
+        },
+      },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    // TODO: Implement refresh token logic with Redis storage
-    return reply.status(501).send({
-      error: 'Not Implemented',
-      message: 'Refresh token functionality will be implemented in future version',
-    });
+    try {
+      const { refreshToken } = refreshSchema.parse(request.body);
+
+      // Refresh the access token using the refresh token
+      const result = await refreshTokenService.refreshAccessToken(
+        refreshToken,
+        (payload: any) => reply.jwtSign(payload)
+      );
+
+      // Log refresh event
+      await fastify.prisma.event.create({
+        data: {
+          actorUserId: result.user.id,
+          type: 'user.token_refreshed',
+          payload: {
+            userId: result.user.id,
+            email: result.user.email,
+          },
+        },
+      });
+
+      return reply.send({
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.newRefreshToken,
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Invalid request data',
+          details: error.errors,
+        });
+      }
+
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid or expired') || 
+            error.message.includes('User account no longer active')) {
+          return reply.status(401).send({
+            error: 'Unauthorized',
+            message: error.message,
+          });
+        }
+      }
+
+      fastify.log.error('Refresh token error:', error);
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Failed to refresh token',
+      });
+    }
   });
 }

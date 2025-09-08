@@ -75,7 +75,8 @@
           "photosPermission": "FlowPay needs access to your photo library to upload deliverable content.",
           "cameraPermission": "FlowPay needs access to your camera to capture deliverable content."
         }
-      ]
+      ],
+      "@react-native-community/netinfo"
     ],
     "experiments": {
       "typedRoutes": true

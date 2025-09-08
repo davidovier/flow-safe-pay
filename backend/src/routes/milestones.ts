@@ -2,6 +2,8 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { MilestoneState, DealState } from '@prisma/client';
 import { getDefaultPaymentProvider } from '../payments/index.js';
+import { DeliverableValidationService } from '../services/DeliverableValidationService.js';
+import { autoReleaseQueue } from '../jobs/autoReleaseQueue.js';
 
 const submitDeliverableSchema = z.object({
   url: z.string().url().optional(),
@@ -12,6 +14,7 @@ const submitDeliverableSchema = z.object({
 });
 
 export async function milestoneRoutes(fastify: FastifyInstance) {
+  const validationService = new DeliverableValidationService();
   
   // Middleware to require authentication
   const requireAuth = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -107,8 +110,8 @@ export async function milestoneRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // TODO: Implement deliverable validation checks
-      const checks = await validateDeliverable(deliverableData);
+      // Validate deliverable content and accessibility
+      const validationResult = await validationService.validateDeliverable(deliverableData);
 
       // Create deliverable and update milestone
       const result = await fastify.prisma.$transaction(async (prisma) => {
@@ -121,16 +124,17 @@ export async function milestoneRoutes(fastify: FastifyInstance) {
             fileHash: deliverableData.fileHash,
             fileName: deliverableData.fileName,
             fileSize: deliverableData.fileSize,
-            checks,
+            validationResults: validationResult,
           },
         });
 
         // Update milestone state
+        const submissionTime = new Date();
         const updatedMilestone = await prisma.milestone.update({
           where: { id: milestoneId },
           data: {
             state: MilestoneState.SUBMITTED,
-            submittedAt: new Date(),
+            submittedAt: submissionTime,
           },
           include: {
             deliverables: true,
@@ -162,7 +166,30 @@ export async function milestoneRoutes(fastify: FastifyInstance) {
         return { milestone: updatedMilestone, deliverable };
       });
 
-      // TODO: Schedule auto-approval timer (BullMQ job)
+      // Schedule auto-release timer (BullMQ job)
+      const autoReleaseDays = parseInt(process.env.DEFAULT_APPROVAL_TIMEOUT_DAYS || '5', 10);
+      const autoReleaseTime = new Date(submissionTime.getTime() + (autoReleaseDays * 24 * 60 * 60 * 1000));
+
+      try {
+        await autoReleaseQueue.add(
+          `auto-release-${result.milestone.id}`,
+          {
+            milestoneId: result.milestone.id,
+            dealId: result.milestone.dealId,
+            scheduledFor: autoReleaseTime,
+            autoReleaseDays,
+          },
+          {
+            delay: autoReleaseTime.getTime() - Date.now(),
+            jobId: `milestone-${result.milestone.id}-auto-release`,
+          }
+        );
+
+        fastify.log.info(`Scheduled auto-release for milestone ${result.milestone.id} at ${autoReleaseTime.toISOString()}`);
+      } catch (queueError) {
+        // Log the error but don't fail the submission
+        fastify.log.error(`Failed to schedule auto-release for milestone ${result.milestone.id}:`, queueError);
+      }
       
       return reply.send(result);
 
@@ -398,36 +425,3 @@ export async function milestoneRoutes(fastify: FastifyInstance) {
   });
 }
 
-// Deliverable validation function (placeholder)
-async function validateDeliverable(deliverable: any): Promise<any> {
-  const checks = {
-    urlAccessible: false,
-    contentMatches: false,
-    hashVerified: false,
-    timestamp: new Date().toISOString(),
-  };
-
-  try {
-    // TODO: Implement actual validation logic
-    // - Check if URL is accessible
-    // - Validate content requirements (hashtags, mentions)
-    // - Verify file hash if provided
-    // - Compare uploaded asset to posted media when possible
-    
-    if (deliverable.url) {
-      // Simulate URL accessibility check
-      checks.urlAccessible = true;
-    }
-
-    if (deliverable.fileHash) {
-      // Simulate hash verification
-      checks.hashVerified = true;
-    }
-
-  } catch (error) {
-    // Log validation errors but don't fail the submission
-    console.error('Deliverable validation error:', error);
-  }
-
-  return checks;
-}

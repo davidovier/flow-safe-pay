@@ -3,6 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import { api } from '../services/api';
 import { DeepLinkingService } from '../navigation/DeepLinking';
 import { NavigationHelper } from '../navigation/NavigationHelper';
+import { ErrorHandler, withRetry } from '../services/errorHandler';
+import { networkStatusManager } from '../services/networkStatus';
 
 interface User {
   id: string;
@@ -16,19 +18,21 @@ interface User {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null;
   isLoading: boolean;
   error: string | null;
 }
 
 type AuthAction = 
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_USER'; payload: { user: User; accessToken: string } }
+  | { type: 'SET_USER'; payload: { user: User; accessToken: string; refreshToken?: string } }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'LOGOUT' };
 
 const initialState: AuthState = {
   user: null,
   accessToken: null,
+  refreshToken: null,
   isLoading: true,
   error: null,
 };
@@ -36,7 +40,7 @@ const initialState: AuthState = {
 const AuthContext = createContext<{
   state: AuthState;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: 'CREATOR' | 'BRAND') => Promise<void>;
+  register: (email: string, password: string, role: 'CREATOR' | 'BRAND', country?: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuthStatus: () => Promise<void>;
   user: User | null;
@@ -60,6 +64,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         user: action.payload.user,
         accessToken: action.payload.accessToken,
+        refreshToken: action.payload.refreshToken || state.refreshToken,
         isLoading: false,
         error: null,
       };
@@ -91,63 +96,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      const response = await api.post('/auth/login', { email, password });
-      const { user, accessToken } = response.data;
+      // Check network connectivity
+      if (!networkStatusManager.isOnline()) {
+        throw new Error('No internet connection');
+      }
+      
+      const response = await withRetry(
+        () => api.post('/auth/login', { email, password }),
+        { maxRetries: 2, baseDelay: 1000, maxDelay: 3000, backoffMultiplier: 2 }
+      );
+      const { user, accessToken, refreshToken } = response.data;
 
-      // Store token securely
+      // Store tokens securely
       await SecureStore.setItemAsync('accessToken', accessToken);
+      if (refreshToken) {
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
+      }
       
-      // Set API authorization header
-      api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      dispatch({ type: 'SET_USER', payload: { user, accessToken } });
+      dispatch({ type: 'SET_USER', payload: { user, accessToken, refreshToken } });
       
       // Handle post-login navigation (including any pending deep links)
       const deepLinking = DeepLinkingService.getInstance();
       const pendingUrl = deepLinking.getPendingUrl();
       NavigationHelper.handlePostAuthRedirect(pendingUrl);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed';
-      dispatch({ type: 'SET_ERROR', payload: message });
-      throw new Error(message);
+      const parsedError = ErrorHandler.parseError(error);
+      ErrorHandler.logError(parsedError, 'AuthContext.login');
+      dispatch({ type: 'SET_ERROR', payload: parsedError.message });
+      throw parsedError;
     }
   };
 
-  const register = async (email: string, password: string, role: 'CREATOR' | 'BRAND') => {
+  const register = async (email: string, password: string, role: 'CREATOR' | 'BRAND', country?: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      const response = await api.post('/auth/register', { email, password, role });
-      const { user, accessToken } = response.data;
+      // Check network connectivity
+      if (!networkStatusManager.isOnline()) {
+        throw new Error('No internet connection');
+      }
+      
+      const response = await withRetry(
+        () => api.post('/auth/register', { email, password, role, country }),
+        { maxRetries: 2, baseDelay: 1000, maxDelay: 3000, backoffMultiplier: 2 }
+      );
+      const { user, accessToken, refreshToken } = response.data;
 
-      // Store token securely
+      // Store tokens securely
       await SecureStore.setItemAsync('accessToken', accessToken);
+      if (refreshToken) {
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
+      }
       
-      // Set API authorization header
-      api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      dispatch({ type: 'SET_USER', payload: { user, accessToken } });
+      dispatch({ type: 'SET_USER', payload: { user, accessToken, refreshToken } });
       
       // Handle post-registration navigation
       NavigationHelper.handlePostAuthRedirect();
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed';
-      dispatch({ type: 'SET_ERROR', payload: message });
-      throw new Error(message);
+      const parsedError = ErrorHandler.parseError(error);
+      ErrorHandler.logError(parsedError, 'AuthContext.register');
+      dispatch({ type: 'SET_ERROR', payload: parsedError.message });
+      throw parsedError;
     }
   };
 
   const logout = async () => {
     try {
-      // Remove token from storage
-      await SecureStore.deleteItemAsync('accessToken');
+      // Attempt to notify server of logout (optional - don't fail if it doesn't work)
+      if (networkStatusManager.isOnline()) {
+        try {
+          await api.post('/auth/logout');
+        } catch (error) {
+          // Ignore server logout errors - we'll clear local tokens regardless
+          console.log('Server logout failed, continuing with local logout');
+        }
+      }
       
-      // Clear API authorization header
-      delete api.defaults.headers.common['Authorization'];
+      // Remove tokens from storage
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('refreshToken');
       
       dispatch({ type: 'LOGOUT' });
     } catch (error) {
-      console.error('Logout error:', error);
+      const parsedError = ErrorHandler.parseError(error);
+      ErrorHandler.logError(parsedError, 'AuthContext.logout');
+      // Still dispatch logout even if there was an error
+      dispatch({ type: 'LOGOUT' });
     }
   };
 
@@ -156,24 +190,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       const token = await SecureStore.getItemAsync('accessToken');
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
       
       if (!token) {
         dispatch({ type: 'SET_LOADING', payload: false });
         return;
       }
 
-      // Set API authorization header
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Verify token with API
-      const response = await api.get('/auth/me');
-      const { user } = response.data;
-      
-      dispatch({ type: 'SET_USER', payload: { user, accessToken: token } });
+      try {
+        // Verify token with API (with retry for network issues)
+        const response = await withRetry(
+          () => api.get('/auth/me'),
+          { maxRetries: 2, baseDelay: 1000, maxDelay: 3000, backoffMultiplier: 2 }
+        );
+        const { user } = response.data;
+        
+        dispatch({ type: 'SET_USER', payload: { user, accessToken: token, refreshToken } });
+      } catch (error: any) {
+        const parsedError = ErrorHandler.parseError(error);
+        
+        // If token is expired and we have a refresh token, try to refresh
+        if (parsedError.statusCode === 401 && refreshToken) {
+          try {
+            const refreshResponse = await withRetry(
+              () => api.post('/auth/refresh', { refreshToken }),
+              { maxRetries: 1, baseDelay: 1000, maxDelay: 2000, backoffMultiplier: 1 }
+            );
+            const { user, accessToken: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
+            
+            // Store new tokens
+            await SecureStore.setItemAsync('accessToken', newToken);
+            if (newRefreshToken) {
+              await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+            }
+            
+            dispatch({ type: 'SET_USER', payload: { user, accessToken: newToken, refreshToken: newRefreshToken } });
+          } catch (refreshError) {
+            // Refresh failed, clear tokens
+            const refreshParsedError = ErrorHandler.parseError(refreshError);
+            ErrorHandler.logError(refreshParsedError, 'AuthContext.checkAuthStatus.refresh');
+            await SecureStore.deleteItemAsync('accessToken');
+            await SecureStore.deleteItemAsync('refreshToken');
+            dispatch({ type: 'LOGOUT' });
+          }
+        } else {
+          // Token is invalid, network error, or no refresh token - handle appropriately
+          if (parsedError.code === 'NETWORK_ERROR') {
+            // For network errors, keep the user logged in locally but show loading state
+            dispatch({ type: 'SET_LOADING', payload: false });
+            ErrorHandler.logError(parsedError, 'AuthContext.checkAuthStatus.network');
+          } else {
+            // For auth errors, clear tokens
+            await SecureStore.deleteItemAsync('accessToken');
+            await SecureStore.deleteItemAsync('refreshToken');
+            dispatch({ type: 'LOGOUT' });
+          }
+        }
+      }
     } catch (error) {
-      // Token is invalid, clear it
+      // General error, clear tokens
+      const parsedError = ErrorHandler.parseError(error);
+      ErrorHandler.logError(parsedError, 'AuthContext.checkAuthStatus.general');
       await SecureStore.deleteItemAsync('accessToken');
-      delete api.defaults.headers.common['Authorization'];
+      await SecureStore.deleteItemAsync('refreshToken');
       dispatch({ type: 'LOGOUT' });
     }
   };
