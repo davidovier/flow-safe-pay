@@ -1,10 +1,10 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AgencyDashboard } from './AgencyDashboard';
+import { BrandDashboard } from './BrandDashboard';
 
 // Import other dashboard components when they exist
 // import { CreatorDashboard } from './CreatorDashboard';
-// import { BrandDashboard } from './BrandDashboard';
 // import { AdminDashboard } from './AdminDashboard';
 
 interface DashboardRouterProps {
@@ -89,61 +89,7 @@ export function DashboardRouter(props: DashboardRouterProps) {
       );
     
     case 'BRAND':
-      // For now, show a placeholder - replace with actual BrandDashboard when ready
-      return (
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Brand Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back! Manage your creator campaigns and track performance.
-            </p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Active Campaigns</h3>
-              </div>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">No active campaigns</p>
-            </div>
-            
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Total Creators</h3>
-              </div>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">Start hiring creators</p>
-            </div>
-            
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Total Spent</h3>
-              </div>
-              <div className="text-2xl font-bold">$0.00</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </div>
-            
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Success Rate</h3>
-              </div>
-              <div className="text-2xl font-bold">0%</div>
-              <p className="text-xs text-muted-foreground">No campaigns yet</p>
-            </div>
-          </div>
-
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4">Getting Started</h3>
-            <div className="space-y-2 text-sm">
-              <p>• Complete your business verification</p>
-              <p>• Set up your payment methods</p>
-              <p>• Create your first campaign</p>
-              <p>• Browse and hire talented creators</p>
-            </div>
-          </div>
-        </div>
-      );
+      return <BrandDashboard {...props} />;
     
     case 'ADMIN':
       // For now, show a placeholder - replace with actual AdminDashboard when ready

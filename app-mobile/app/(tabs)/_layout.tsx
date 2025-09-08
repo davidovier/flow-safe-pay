@@ -34,46 +34,89 @@ export default function TabLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="deals"
-        options={{
-          title: 'Deals',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase" size={size} color={color} />
-          ),
-          headerTitle: 'My Deals',
-        }}
-      />
-      <Tabs.Screen
-        name="projects"
-        options={{
-          title: 'Projects',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="folder" size={size} color={color} />
-          ),
-          headerTitle: 'My Projects',
-        }}
-      />
-      <Tabs.Screen
-        name="milestones"
-        options={{
-          title: 'Milestones',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-circle" size={size} color={color} />
-          ),
-          headerTitle: 'Milestones',
-        }}
-      />
-      <Tabs.Screen
-        name="payouts"
-        options={{
-          title: 'Payouts',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="card" size={size} color={color} />
-          ),
-          headerTitle: 'Payouts',
-        }}
-      />
+      {/* Creator Navigation */}
+      {user?.role === 'CREATOR' && (
+        <>
+          <Tabs.Screen
+            name="deals"
+            options={{
+              title: 'Deals',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="briefcase" size={size} color={color} />
+              ),
+              headerTitle: 'My Deals',
+            }}
+          />
+          <Tabs.Screen
+            name="milestones"
+            options={{
+              title: 'Milestones',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="checkmark-circle" size={size} color={color} />
+              ),
+              headerTitle: 'Milestones',
+            }}
+          />
+          <Tabs.Screen
+            name="payouts"
+            options={{
+              title: 'Payouts',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="card" size={size} color={color} />
+              ),
+              headerTitle: 'Payouts',
+            }}
+          />
+        </>
+      )}
+
+      {/* Brand Navigation */}
+      {user?.role === 'BRAND' && (
+        <>
+          <Tabs.Screen
+            name="campaigns"
+            options={{
+              title: 'Campaigns',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="megaphone" size={size} color={color} />
+              ),
+              headerTitle: 'My Campaigns',
+            }}
+          />
+          <Tabs.Screen
+            name="creators"
+            options={{
+              title: 'Creators',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="people" size={size} color={color} />
+              ),
+              headerTitle: 'Find Creators',
+            }}
+          />
+          <Tabs.Screen
+            name="content"
+            options={{
+              title: 'Content',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="images" size={size} color={color} />
+              ),
+              headerTitle: 'Content Review',
+            }}
+          />
+          <Tabs.Screen
+            name="analytics"
+            options={{
+              title: 'Analytics',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="bar-chart" size={size} color={color} />
+              ),
+              headerTitle: 'Analytics',
+            }}
+          />
+        </>
+      )}
+
+      {/* Agency Navigation */}
       {user?.role === 'AGENCY' && (
         <Tabs.Screen
           name="agency"
@@ -85,6 +128,32 @@ export default function TabLayout() {
             headerTitle: 'Agency Dashboard',
           }}
         />
+      )}
+
+      {/* Default/Fallback Navigation for other roles or missing role */}
+      {(!user?.role || (user.role !== 'CREATOR' && user.role !== 'BRAND' && user.role !== 'AGENCY')) && (
+        <>
+          <Tabs.Screen
+            name="deals"
+            options={{
+              title: 'Deals',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="briefcase" size={size} color={color} />
+              ),
+              headerTitle: 'Deals',
+            }}
+          />
+          <Tabs.Screen
+            name="projects"
+            options={{
+              title: 'Projects',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="folder" size={size} color={color} />
+              ),
+              headerTitle: 'Projects',
+            }}
+          />
+        </>
       )}
       <Tabs.Screen
         name="profile"
