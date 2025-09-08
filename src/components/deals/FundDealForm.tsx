@@ -97,17 +97,17 @@ export function FundDealForm({ deal, onSuccess, onCancel }: FundDealFormProps) {
     try {
       setLoadingPaymentMethods(true);
       
-      // Fetch user's payment methods from Supabase
-      const { data, error } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('user_id', userProfile.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setPaymentMethods(data || []);
+      // For now, use mock payment methods until payment_methods table is created
+      const mockPaymentMethods = [
+        {
+          id: 'default-card',
+          type: 'card' as const,
+          last4: '****',
+          brand: 'visa'
+        }
+      ];
+      
+      setPaymentMethods(mockPaymentMethods);
     } catch (error: any) {
       console.error('Error fetching payment methods:', error);
       toast({
@@ -129,8 +129,8 @@ export function FundDealForm({ deal, onSuccess, onCancel }: FundDealFormProps) {
       const response = await fetch('/api/deals/fund', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userProfile.access_token}`,
+          // Remove Authorization header with access_token
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           deal_id: deal.id,

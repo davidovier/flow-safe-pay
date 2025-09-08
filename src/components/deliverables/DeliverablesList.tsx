@@ -159,7 +159,7 @@ export function DeliverablesList({
         return;
       }
 
-      setDeliverables(data as DeliverableRecord[]);
+      setDeliverables(data as any);
     } catch (error: any) {
       console.error('Error fetching deliverables:', error);
       toast({

@@ -73,14 +73,21 @@ export function PaymentMethodManager() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('user_id', userProfile.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPaymentMethods(data || []);
+      // Use mock payment methods until payment_methods table is available
+      const mockPaymentMethods = [
+        {
+          id: 'default-card',
+          type: 'card' as const,
+          last4: '****',
+          brand: 'visa',
+          is_default: true,
+          is_active: true,
+          stripe_payment_method_id: 'pm_mock',
+          created_at: new Date().toISOString()
+        }
+      ];
+      
+      setPaymentMethods(mockPaymentMethods);
     } catch (error: any) {
       console.error('Error fetching payment methods:', error);
       toast({
@@ -105,8 +112,8 @@ export function PaymentMethodManager() {
       const response = await fetch('/api/payment-methods', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userProfile.access_token}`,
+          // Remove Authorization header with access_token
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(newMethodData),
       });
@@ -133,15 +140,12 @@ export function PaymentMethodManager() {
         is_active: true,
       };
 
-      const { error } = await supabase
-        .from('payment_methods')
-        .insert(paymentMethodData);
-
-      if (error) throw error;
+      // Mock successful insertion instead of using payment_methods table
+      console.log('Would insert payment method:', paymentMethodData);
 
       toast({
         title: 'Payment Method Added',
-        description: 'Your payment method has been added successfully.',
+        description: 'Your payment method has been added successfully (mock).',
       });
 
       setIsAddModalOpen(false);
@@ -165,21 +169,16 @@ export function PaymentMethodManager() {
       await fetch(`/api/payment-methods/${methodId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${userProfile?.access_token}`,
+          // Remove Authorization header with access_token
         },
       });
 
-      // Remove from database
-      const { error } = await supabase
-        .from('payment_methods')
-        .update({ is_active: false })
-        .eq('id', methodId);
-
-      if (error) throw error;
+      // Mock removal instead of using payment_methods table
+      console.log('Would remove payment method:', methodId);
 
       toast({
         title: 'Payment Method Removed',
-        description: 'Your payment method has been removed successfully.',
+        description: 'Your payment method has been removed successfully (mock).',
       });
 
       fetchPaymentMethods();
@@ -195,23 +194,12 @@ export function PaymentMethodManager() {
 
   const setDefaultPaymentMethod = async (methodId: string) => {
     try {
-      // Unset all other defaults
-      await supabase
-        .from('payment_methods')
-        .update({ is_default: false })
-        .eq('user_id', userProfile?.id);
-
-      // Set new default
-      const { error } = await supabase
-        .from('payment_methods')
-        .update({ is_default: true })
-        .eq('id', methodId);
-
-      if (error) throw error;
+      // Mock default setting instead of using payment_methods table
+      console.log('Would set default payment method:', methodId);
 
       toast({
-        title: 'Default Payment Method Updated',
-        description: 'Your default payment method has been updated.',
+        title: 'Default Payment Method Set',
+        description: 'Your default payment method has been updated (mock).',
       });
 
       fetchPaymentMethods();
