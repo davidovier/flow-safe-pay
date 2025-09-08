@@ -1,3 +1,4 @@
+// OPTIMIZATION: Bundle splitting with lazy loading
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,65 +8,81 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import '@/lib/i18n';
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { initXSSProtection } from "@/utils/security/xssProtection";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useRoutePrefetching } from "@/hooks/useRoutePrefetching";
+import { Skeleton } from "@/components/ui/skeleton";
+// OPTIMIZATION: Eager load critical pages, lazy load others
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Projects from "./pages/brand/Projects";
-import NewProject from "./pages/brand/NewProject";
-import ProjectDetail from "./pages/brand/ProjectDetail";
-import Deals from "./pages/Deals";
-import Deliverables from "./pages/Deliverables";
-import Payouts from "./pages/Payouts";
-import Payments from "./pages/Payments";
-import Pricing from "./pages/Pricing";
-import AdminUsers from "./pages/admin/Users";
-import AdminDeals from "./pages/admin/Deals";
-import AdminTransactions from "./pages/admin/Transactions";
-import Settings from "./pages/Settings";
-import KYCStatus from "./pages/KYCStatus";
-import Creators from "./pages/Creators";
-import CreatorProfile from "./pages/CreatorProfile";
-import DealDetail from "./pages/DealDetail";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Cookies from "./pages/Cookies";
-import Security from "./pages/Security";
-import Help from "./pages/Help";
-import Contact from "./pages/Contact";
-import Status from "./pages/Status";
-import Community from "./pages/Community";
-import ApiDocs from "./pages/ApiDocs";
-import Api from "./pages/Api";
-import Integrations from "./pages/Integrations";
-import Changelog from "./pages/Changelog";
-import Partnerships from "./pages/Partnerships";
-import MediaKit from "./pages/MediaKit";
-import Compliance from "./pages/Compliance";
-import NotFound from "./pages/NotFound";
+
+// OPTIMIZATION: Lazy load role-specific and less critical pages
+const Projects = lazy(() => import(/* webpackChunkName: "brand" */ "./pages/brand/Projects"));
+const NewProject = lazy(() => import(/* webpackChunkName: "brand" */ "./pages/brand/NewProject"));
+const ProjectDetail = lazy(() => import(/* webpackChunkName: "brand" */ "./pages/brand/ProjectDetail"));
+const Deals = lazy(() => import(/* webpackChunkName: "deals" */ "./pages/Deals"));
+const Deliverables = lazy(() => import(/* webpackChunkName: "creator" */ "./pages/Deliverables"));
+const Payouts = lazy(() => import(/* webpackChunkName: "creator" */ "./pages/Payouts"));
+const Payments = lazy(() => import(/* webpackChunkName: "brand" */ "./pages/Payments"));
+const Creators = lazy(() => import(/* webpackChunkName: "brand" */ "./pages/Creators"));
+const CreatorProfile = lazy(() => import(/* webpackChunkName: "brand" */ "./pages/CreatorProfile"));
+const DealDetail = lazy(() => import(/* webpackChunkName: "deals" */ "./pages/DealDetail"));
+const Settings = lazy(() => import(/* webpackChunkName: "settings" */ "./pages/Settings"));
+const KYCStatus = lazy(() => import(/* webpackChunkName: "settings" */ "./pages/KYCStatus"));
+
+// OPTIMIZATION: Lazy load admin pages
+const AdminUsers = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/admin/Users"));
+const AdminDeals = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/admin/Deals"));
+const AdminTransactions = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/admin/Transactions"));
+
+// OPTIMIZATION: Lazy load marketing/static pages
+const Pricing = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/Pricing"));
+const Blog = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/Blog"));
+const BlogPost = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/BlogPost"));
+const Privacy = lazy(() => import(/* webpackChunkName: "legal" */ "./pages/Privacy"));
+const Terms = lazy(() => import(/* webpackChunkName: "legal" */ "./pages/Terms"));
+const Cookies = lazy(() => import(/* webpackChunkName: "legal" */ "./pages/Cookies"));
+const Security = lazy(() => import(/* webpackChunkName: "legal" */ "./pages/Security"));
+const Help = lazy(() => import(/* webpackChunkName: "support" */ "./pages/Help"));
+const Contact = lazy(() => import(/* webpackChunkName: "support" */ "./pages/Contact"));
+const Status = lazy(() => import(/* webpackChunkName: "support" */ "./pages/Status"));
+const Community = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/Community"));
+const ApiDocs = lazy(() => import(/* webpackChunkName: "developer" */ "./pages/ApiDocs"));
+const Api = lazy(() => import(/* webpackChunkName: "developer" */ "./pages/Api"));
+const Integrations = lazy(() => import(/* webpackChunkName: "developer" */ "./pages/Integrations"));
+const Changelog = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/Changelog"));
+const Partnerships = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/Partnerships"));
+const MediaKit = lazy(() => import(/* webpackChunkName: "marketing" */ "./pages/MediaKit"));
+const Compliance = lazy(() => import(/* webpackChunkName: "legal" */ "./pages/Compliance"));
+const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  // Initialize security protections
-  useEffect(() => {
-    initXSSProtection();
-  }, []);
+// OPTIMIZATION: Loading fallback component
+const PageLoadingSkeleton = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-4 w-96" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+        {[1, 2, 3].map(i => (
+          <Skeleton key={i} className="h-32 w-64" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const AppContent = () => {
+  // OPTIMIZATION: Initialize route prefetching
+  useRoutePrefetching();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <SubscriptionProvider>
-            <BrowserRouter>
-            <Routes>
+    <Suspense fallback={<PageLoadingSkeleton />}>
+      <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
@@ -202,11 +219,30 @@ const App = () => {
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </BrowserRouter>
-        </SubscriptionProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </Suspense>
+    );
+};
+
+const App = () => {
+  // Initialize security protections
+  useEffect(() => {
+    initXSSProtection();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <SubscriptionProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </SubscriptionProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

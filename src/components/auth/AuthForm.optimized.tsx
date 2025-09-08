@@ -133,12 +133,11 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             ? 'Start earning with instant, secure payments'
             : role === 'BRAND'
             ? 'Find and collaborate with top creators'
-            : role === 'AGENCY'
-            ? 'Scale your creator management business'
-            : 'Join the future of creator economy'
+            : 'Scale your creator management business'
           }
         </CardDescription>
       </CardHeader>
+      
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {/* Simplified security indicator */}
@@ -153,6 +152,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
+
           {mode === 'signup' && (
             <>
               <div className="grid grid-cols-2 gap-4">
@@ -181,6 +181,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
                   />
                 </div>
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="role" className="text-sm font-medium text-gray-700">I am a...</Label>
                 <Select value={role} onValueChange={(value: UserRole) => setRole(value)}>
@@ -196,6 +197,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
               </div>
             </>
           )}
+
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</Label>
             <Input
@@ -264,6 +266,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
             )}
           </div>
         </CardContent>
+
         <CardFooter className="flex flex-col space-y-4 pt-6">
           <Button 
             type="submit" 

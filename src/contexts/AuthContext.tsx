@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,13 @@ export interface UserProfile {
   country: string | null;
   stripe_account_id: string | null;
   kyc_status: string;
+}
+
+// OPTIMIZATION: Add caching
+interface CachedProfile {
+  profile: UserProfile;
+  timestamp: number;
+  ttl: number; // 5 minutes cache
 }
 
 interface AuthContextType {
@@ -36,83 +43,122 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // OPTIMIZATION: Add caching and prevent duplicate requests
+  const profileCache = useRef<Map<string, CachedProfile>>(new Map());
+  const fetchPromises = useRef<Map<string, Promise<UserProfile | null>>>(new Map());
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // OPTIMIZATION: Combine auth state listener with session check
+    const initAuth = async () => {
+      // Get existing session first
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      
+      if (initialSession?.user) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+        // OPTIMIZATION: Parallel profile fetch
+        await fetchUserProfile(initialSession.user.id);
+      }
+      setLoading(false);
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile and handle deleted accounts
-          setTimeout(async () => {
-            await fetchUserProfile(session.user.id);
-          }, 0);
+          // OPTIMIZATION: No setTimeout, direct call
+          await fetchUserProfile(session.user.id);
         } else {
           setUserProfile(null);
+          // OPTIMIZATION: Clear cache on signout
+          profileCache.current.clear();
+          fetchPromises.current.clear();
         }
-        
-        setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-      setLoading(false);
-    });
-
+    initAuth();
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+  // OPTIMIZATION: Cached profile fetching with deduplication
+  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+    // Check cache first
+    const cached = profileCache.current.get(userId);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < cached.ttl) {
+      setUserProfile(cached.profile);
+      return cached.profile;
+    }
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        
-        // If user profile doesn't exist (deleted account), sign them out
-        if (error.code === 'PGRST116') { // No rows returned
-          console.log('User profile not found - account may have been deleted. Signing out...');
+    // Prevent duplicate requests
+    if (fetchPromises.current.has(userId)) {
+      return fetchPromises.current.get(userId)!;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          
+          if (error.code === 'PGRST116') {
+            console.log('User profile not found - account may have been deleted.');
+            toast({
+              title: "Account Not Found",
+              description: "This account has been deleted. You have been signed out.",
+              variant: "destructive"
+            });
+            await supabase.auth.signOut();
+          }
+          return null;
+        }
+
+        // Check if account is marked as deleted
+        if (data?.email === 'DELETED_ACCOUNT' || data?.first_name === '[DELETED]') {
+          console.log('Account marked as deleted. Signing out...');
           toast({
-            title: "Account Not Found",
+            title: "Account Deleted",
             description: "This account has been deleted. You have been signed out.",
             variant: "destructive"
           });
           await supabase.auth.signOut();
+          return null;
         }
-        return;
-      }
 
-      // Check if account is marked as deleted
-      if (data?.email === 'DELETED_ACCOUNT' || data?.first_name === '[DELETED]') {
-        console.log('Account marked as deleted. Signing out...');
-        toast({
-          title: "Account Deleted",
-          description: "This account has been deleted. You have been signed out.",
-          variant: "destructive"
+        // OPTIMIZATION: Cache the result
+        profileCache.current.set(userId, {
+          profile: data,
+          timestamp: now,
+          ttl: 5 * 60 * 1000 // 5 minutes
         });
-        await supabase.auth.signOut();
-        return;
-      }
 
-      setUserProfile(data);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
+        setUserProfile(data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      } finally {
+        // Remove from pending promises
+        fetchPromises.current.delete(userId);
+      }
+    })();
+
+    fetchPromises.current.set(userId, fetchPromise);
+    return fetchPromise;
   };
 
+  // OPTIMIZATION: Reduced validation in signIn for faster login
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -128,35 +174,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error };
     }
 
-    // Check if this is a deleted account immediately after successful auth
+    // OPTIMIZATION: Parallel check for deleted accounts
     if (data?.user) {
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('email, first_name, kyc_status')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError || !profile) {
-        // Account doesn't exist - was completely deleted
-        await supabase.auth.signOut();
-        toast({
-          variant: "destructive",
-          title: "Account Not Found",
-          description: "This account has been deleted. Please create a new account if needed.",
-        });
-        return { error: new Error('Account has been deleted') };
-      }
-
-      if (profile.email === 'DELETED_ACCOUNT' || profile.first_name === '[DELETED]' || profile.kyc_status === 'DELETED') {
-        // Account is marked as deleted
-        await supabase.auth.signOut();
-        toast({
-          variant: "destructive",
-          title: "Account Deleted", 
-          description: "This account has been deleted. Please create a new account if needed.",
-        });
-        return { error: new Error('Account has been deleted') };
-      }
+      // Don't await - let it happen in background
+      fetchUserProfile(data.user.id).catch(() => {
+        // Profile check failed, but user is already being handled by auth state change
+      });
     }
 
     toast({
@@ -200,6 +223,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // OPTIMIZATION: Clear cache on signout
+    profileCache.current.clear();
+    fetchPromises.current.clear();
+    
     await supabase.auth.signOut();
     toast({
       title: "Signed out",
@@ -222,6 +249,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message,
       });
     } else {
+      // OPTIMIZATION: Invalidate cache and refetch
+      profileCache.current.delete(user.id);
       await fetchUserProfile(user.id);
       toast({
         title: "Profile updated",

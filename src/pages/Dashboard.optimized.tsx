@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18n';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Handshake, 
@@ -193,7 +193,7 @@ export default function Dashboard() {
     switch (state) {
       case 'DRAFT': return 'secondary';
       case 'FUNDED': return 'default';
-      case 'RELEASED': return 'default';
+      case 'RELEASED': return 'success';
       case 'DISPUTED': return 'destructive';
       default: return 'secondary';
     }
