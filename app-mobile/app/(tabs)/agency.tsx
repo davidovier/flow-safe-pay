@@ -13,12 +13,16 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { api } from '../../src/services/api';
 
 interface AgencyStats {
+  totalClients: number;
   totalCreators: number;
   activeDeals: number;
   totalRevenue: number;
+  totalCommission: number;
   completedDeals: number;
   tier: string;
   creatorLimit: number;
+  clientLimit: number;
+  conversionRate: number;
 }
 
 interface Creator {
@@ -42,10 +46,13 @@ export default function AgencyScreen() {
         // TODO: Replace with actual analytics endpoint
         Promise.resolve({
           data: {
-            totalCreators: 8,
-            activeDeals: 5,
-            totalRevenue: 45000,
-            completedDeals: 12,
+            totalClients: 5,
+            totalCreators: 18,
+            activeDeals: 12,
+            totalRevenue: 185000,
+            totalCommission: 27750,
+            completedDeals: 28,
+            conversionRate: 74,
           }
         })
       ]);
@@ -53,8 +60,9 @@ export default function AgencyScreen() {
       setAgency(agencyResponse.data);
       setStats({
         ...analyticsResponse.data,
-        tier: agencyResponse.data.subscription?.tier || 'STARTER',
-        creatorLimit: agencyResponse.data.maxCreators || 5,
+        tier: agencyResponse.data.subscription?.tier || 'PROFESSIONAL',
+        creatorLimit: agencyResponse.data.maxCreators || 25,
+        clientLimit: agencyResponse.data.maxClients || 10,
       });
     } catch (error: any) {
       console.error('Error loading agency data:', error);
@@ -148,18 +156,35 @@ export default function AgencyScreen() {
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
           <View style={[styles.statCard, styles.statCardPrimary]}>
+            <Ionicons name="business" size={24} color="#3B82F6" />
+            <Text style={styles.statValue}>
+              {stats?.totalClients || 0}
+              <Text style={styles.statLimit}>/{stats?.clientLimit || 10}</Text>
+            </Text>
+            <Text style={styles.statLabel}>Clients</Text>
+          </View>
+          
+          <View style={[styles.statCard, styles.statCardSecondary]}>
             <Ionicons name="people" size={24} color="#8B5CF6" />
             <Text style={styles.statValue}>
               {stats?.totalCreators || 0}
-              <Text style={styles.statLimit}>/{stats?.creatorLimit || 5}</Text>
+              <Text style={styles.statLimit}>/{stats?.creatorLimit || 25}</Text>
             </Text>
             <Text style={styles.statLabel}>Creators</Text>
           </View>
-          
+        </View>
+
+        <View style={styles.statsRow}>
           <View style={[styles.statCard, styles.statCardSecondary]}>
             <Ionicons name="briefcase" size={24} color="#059669" />
             <Text style={styles.statValue}>{stats?.activeDeals || 0}</Text>
             <Text style={styles.statLabel}>Active Deals</Text>
+          </View>
+          
+          <View style={[styles.statCard, styles.statCardSecondary]}>
+            <Ionicons name="trophy" size={24} color="#F59E0B" />
+            <Text style={styles.statValue}>{stats?.conversionRate || 0}%</Text>
+            <Text style={styles.statLabel}>Success Rate</Text>
           </View>
         </View>
 
@@ -173,9 +198,11 @@ export default function AgencyScreen() {
           </View>
           
           <View style={[styles.statCard, styles.statCardSecondary]}>
-            <Ionicons name="checkmark-circle" size={24} color="#0891B2" />
-            <Text style={styles.statValue}>{stats?.completedDeals || 0}</Text>
-            <Text style={styles.statLabel}>Completed</Text>
+            <Ionicons name="card" size={24} color="#10B981" />
+            <Text style={styles.statValue}>
+              {formatCurrency(stats?.totalCommission || 0)}
+            </Text>
+            <Text style={styles.statLabel}>Commission</Text>
           </View>
         </View>
       </View>
@@ -192,13 +219,13 @@ export default function AgencyScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.subscriptionDescription}>
-            Managing {stats?.totalCreators || 0} of {stats?.creatorLimit || 5} creators
+            Managing {stats?.totalClients || 0} clients and {stats?.totalCreators || 0} creators
           </Text>
-          {stats && stats.totalCreators >= stats.creatorLimit * 0.8 && (
+          {stats && (stats.totalCreators >= stats.creatorLimit * 0.8 || stats.totalClients >= stats.clientLimit * 0.8) && (
             <View style={styles.warningBanner}>
               <Ionicons name="warning" size={16} color="#F59E0B" />
               <Text style={styles.warningText}>
-                Approaching creator limit. Consider upgrading.
+                Approaching capacity limits. Consider upgrading.
               </Text>
             </View>
           )}
@@ -210,78 +237,122 @@ export default function AgencyScreen() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
           <TouchableOpacity style={styles.actionCard}>
-            <Ionicons name="person-add" size={32} color="#8B5CF6" />
-            <Text style={styles.actionTitle}>Invite Creator</Text>
-            <Text style={styles.actionDescription}>Add new creators to your agency</Text>
+            <Ionicons name="business" size={32} color="#3B82F6" />
+            <Text style={styles.actionTitle}>Onboard Client</Text>
+            <Text style={styles.actionDescription}>Add new brand clients</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionCard}>
-            <Ionicons name="analytics" size={32} color="#059669" />
+            <Ionicons name="person-add" size={32} color="#8B5CF6" />
+            <Text style={styles.actionTitle}>Invite Creator</Text>
+            <Text style={styles.actionDescription}>Expand creator portfolio</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionCard}>
+            <Ionicons name="add-circle" size={32} color="#059669" />
+            <Text style={styles.actionTitle}>Create Deal</Text>
+            <Text style={styles.actionDescription}>Match clients with creators</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionCard}>
+            <Ionicons name="analytics" size={32} color="#F59E0B" />
             <Text style={styles.actionTitle}>View Analytics</Text>
-            <Text style={styles.actionDescription}>Track performance metrics</Text>
+            <Text style={styles.actionDescription}>Track commission & performance</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionCard}>
             <Ionicons name="document-text" size={32} color="#0891B2" />
-            <Text style={styles.actionTitle}>Manage Deals</Text>
-            <Text style={styles.actionDescription}>Oversee creator deals</Text>
+            <Text style={styles.actionTitle}>Deal Pipeline</Text>
+            <Text style={styles.actionDescription}>Monitor active deals</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionCard}>
             <Ionicons name="settings" size={32} color="#6B7280" />
             <Text style={styles.actionTitle}>Settings</Text>
-            <Text style={styles.actionDescription}>Configure agency preferences</Text>
+            <Text style={styles.actionDescription}>Agency configuration</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Recent Creators */}
+      {/* Recent Activity */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Creators</Text>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
           <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.seeAllText}>View All</Text>
           </TouchableOpacity>
         </View>
         
-        {agency.managedCreators?.length > 0 ? (
-          agency.managedCreators.slice(0, 3).map((creator: Creator) => (
-            <View key={creator.id} style={styles.creatorCard}>
-              <View style={styles.creatorAvatar}>
-                <Text style={styles.creatorAvatarText}>
-                  {creator.email.substring(0, 2).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.creatorInfo}>
-                <Text style={styles.creatorEmail}>{creator.email}</Text>
-                <Text style={styles.creatorDate}>
-                  Joined {new Date(creator.createdAt).toLocaleDateString()}
-                </Text>
-              </View>
-              <View style={styles.creatorStatus}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    creator.kycStatus === 'APPROVED'
-                      ? styles.statusActive
-                      : styles.statusPending,
-                  ]}
-                />
-                <Text style={styles.statusText}>
-                  {creator.kycStatus === 'APPROVED' ? 'Active' : 'Pending'}
-                </Text>
-              </View>
+        {[
+          {
+            id: '1',
+            icon: 'checkmark-circle',
+            color: '#10B981',
+            title: 'Deal completed by Mike Chen',
+            subtitle: 'StyleCorp campaign - $930 commission',
+            time: '2 hours ago',
+          },
+          {
+            id: '2',
+            icon: 'business',
+            color: '#3B82F6',
+            title: 'New client onboarded',
+            subtitle: 'TechFlow joined - PROFESSIONAL tier',
+            time: '1 day ago',
+          },
+          {
+            id: '3',
+            icon: 'add-circle',
+            color: '#059669',
+            title: 'Deal created',
+            subtitle: 'FitLife x Emma Davis - $3,200 value',
+            time: '2 days ago',
+          },
+          {
+            id: '4',
+            icon: 'person-add',
+            color: '#8B5CF6',
+            title: 'Creator invited',
+            subtitle: 'Sarah Johnson accepted invitation',
+            time: '3 days ago',
+          },
+        ].map((activity) => (
+          <View key={activity.id} style={styles.activityCard}>
+            <View style={[styles.activityIcon, { backgroundColor: `${activity.color}20` }]}>
+              <Ionicons name={activity.icon as any} size={20} color={activity.color} />
             </View>
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyStateText}>No creators yet</Text>
-            <TouchableOpacity style={styles.inviteButton}>
-              <Text style={styles.inviteButtonText}>Invite Your First Creator</Text>
-            </TouchableOpacity>
+            <View style={styles.activityContent}>
+              <Text style={styles.activityTitle}>{activity.title}</Text>
+              <Text style={styles.activitySubtitle}>{activity.subtitle}</Text>
+            </View>
+            <View style={styles.activityTime}>
+              <Text style={styles.activityTimeText}>{activity.time}</Text>
+            </View>
           </View>
-        )}
+        ))}
+
+        {/* Quick Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portfolio Overview</Text>
+          <View style={styles.insightsCard}>
+            <View style={styles.insightRow}>
+              <Text style={styles.insightLabel}>Active Creator Portfolio</Text>
+              <Text style={styles.insightValue}>{stats?.totalCreators || 0} creators</Text>
+            </View>
+            <View style={styles.insightRow}>
+              <Text style={styles.insightLabel}>Client Relationships</Text>
+              <Text style={styles.insightValue}>{stats?.totalClients || 0} active clients</Text>
+            </View>
+            <View style={styles.insightRow}>
+              <Text style={styles.insightLabel}>This Month's Commission</Text>
+              <Text style={styles.insightValue}>{formatCurrency(stats?.totalCommission || 0)}</Text>
+            </View>
+            <View style={styles.insightRow}>
+              <Text style={styles.insightLabel}>Deal Success Rate</Text>
+              <Text style={styles.insightValue}>{stats?.conversionRate || 0}%</Text>
+            </View>
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -454,6 +525,68 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
     textAlign: 'center',
+  },
+  activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  activitySubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  activityTime: {
+    alignItems: 'flex-end',
+  },
+  activityTimeText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  insightsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  insightRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  insightLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  insightValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
   },
   creatorCard: {
     backgroundColor: '#FFFFFF',
