@@ -1,0 +1,39 @@
+# Digital Ocean App Platform Configuration
+name: flowpay-app
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/flow-safe-pay
+    branch: main
+    deploy_on_push: true
+  build_command: npm run build
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /
+  envs:
+  - key: VITE_SUPABASE_URL
+    value: ${VITE_SUPABASE_URL}
+  - key: VITE_SUPABASE_ANON_KEY
+    value: ${VITE_SUPABASE_ANON_KEY}
+
+- name: api
+  source_dir: /backend
+  github:
+    repo: your-username/flow-safe-pay
+    branch: main
+    deploy_on_push: true
+  build_command: npm run build
+  run_command: npm start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /api
+  envs:
+  - key: DATABASE_URL
+    value: ${DATABASE_URL}
+  - key: STRIPE_SECRET_KEY
+    value: ${STRIPE_SECRET_KEY}
