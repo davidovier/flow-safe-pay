@@ -16,54 +16,65 @@ import { apiClient } from '../../src/services/api';
 
 interface Deal {
   id: string;
-  project: {
+  title: string;
+  brand: {
     id: string;
-    title: string;
-    brand: {
-      first_name: string;
-      last_name: string;
-    };
+    name: string;
   };
-  creator: {
-    first_name: string;
-    last_name: string;
+  agency?: {
+    id: string;
+    name: string;
   };
-  amount_total: number;
-  currency: string;
-  state: 'DRAFT' | 'FUNDED' | 'RELEASED' | 'DISPUTED' | 'REFUNDED';
-  created_at: string;
-  funded_at?: string;
-  completed_at?: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+  deadline: string;
+  createdAt: string;
+  milestones: Milestone[];
+  tags: string[];
+}
+
+interface Milestone {
+  id: string;
+  title: string;
+  description: string;
+  amount: number;
+  deadline: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'SUBMITTED' | 'APPROVED' | 'REVISION_REQUESTED';
+  feedback?: string;
+  rating?: number;
 }
 
 const DealCard: React.FC<{ deal: Deal; onPress: () => void }> = ({ deal, onPress }) => {
   const getStateColor = (state: string) => {
     switch (state) {
-      case 'DRAFT': return '#FF9500';
-      case 'FUNDED': return '#007AFF';
-      case 'RELEASED': return '#34C759';
-      case 'DISPUTED': return '#FF3B30';
-      case 'REFUNDED': return '#8E8E93';
+      case 'PENDING': return '#FF9500';
+      case 'ACCEPTED':
+      case 'IN_PROGRESS': return '#007AFF';
+      case 'DELIVERED': return '#8B5CF6';
+      case 'COMPLETED': return '#34C759';
+      case 'CANCELLED': return '#FF3B30';
       default: return '#8E8E93';
     }
   };
 
   const getStateText = (state: string) => {
     switch (state) {
-      case 'DRAFT': return 'Pending';
-      case 'FUNDED': return 'Active';
-      case 'RELEASED': return 'Completed';
-      case 'DISPUTED': return 'Disputed';
-      case 'REFUNDED': return 'Refunded';
+      case 'PENDING': return 'Pending';
+      case 'ACCEPTED': return 'Accepted';
+      case 'IN_PROGRESS': return 'In Progress';
+      case 'DELIVERED': return 'Delivered';
+      case 'COMPLETED': return 'Completed';
+      case 'CANCELLED': return 'Cancelled';
       default: return state;
     }
   };
 
-  const formatAmount = (amount: number, currency: string) => {
+  const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(amount / 100);
+      currency: 'USD',
+    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -74,28 +85,55 @@ const DealCard: React.FC<{ deal: Deal; onPress: () => void }> = ({ deal, onPress
     });
   };
 
+  const getProgress = () => {
+    if (deal.milestones.length === 0) return 0;
+    const approvedMilestones = deal.milestones.filter(m => m.status === 'APPROVED').length;
+    return (approvedMilestones / deal.milestones.length) * 100;
+  };
+
   return (
     <TouchableOpacity style={styles.dealCard} onPress={onPress}>
       <View style={styles.dealHeader}>
         <Text style={styles.dealTitle} numberOfLines={1}>
-          {deal.project.title}
+          {deal.title}
         </Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStateColor(deal.state) }]}>
-          <Text style={styles.statusText}>{getStateText(deal.state)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStateColor(deal.status) }]}>
+          <Text style={styles.statusText}>{getStateText(deal.status)}</Text>
         </View>
       </View>
       
       <Text style={styles.dealSubtitle}>
-        {deal.project.brand.first_name} {deal.project.brand.last_name}
+        {deal.brand.name} {deal.agency && `via ${deal.agency.name}`}
       </Text>
       
+      {/* Progress Bar */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBackground}>
+          <View style={[styles.progressFill, { width: `${getProgress()}%` }]} />
+        </View>
+        <Text style={styles.progressText}>
+          {deal.milestones.filter(m => m.status === 'APPROVED').length}/{deal.milestones.length} milestones
+        </Text>
+      </View>
+      
       <View style={styles.dealFooter}>
-        <Text style={styles.dealAmount}>
-          {formatAmount(deal.amount_total, deal.currency)}
-        </Text>
-        <Text style={styles.dealDate}>
-          {formatDate(deal.created_at)}
-        </Text>
+        <View>
+          <Text style={styles.dealAmount}>{formatAmount(deal.totalAmount)}</Text>
+          <Text style={styles.dealPaid}>{formatAmount(deal.paidAmount)} paid</Text>
+        </View>
+        <View style={styles.dealDates}>
+          <Text style={styles.dealDate}>Due: {formatDate(deal.deadline)}</Text>
+          <Text style={styles.dealCreated}>Created: {formatDate(deal.createdAt)}</Text>
+        </View>
+      </View>
+      
+      {/* Tags */}
+      <View style={styles.tagsContainer}>
+        {deal.tags.slice(0, 3).map((tag, index) => (
+          <View key={index} style={styles.tag}>
+            <Text style={styles.tagText}>{tag}</Text>
+          </View>
+        ))}
       </View>
     </TouchableOpacity>
   );
@@ -112,9 +150,117 @@ export default function DealsScreen() {
 
   const loadDeals = async () => {
     try {
-      const params = filter ? { status: filter } : {};
-      const response = await apiClient.get('/deals', { params });
-      setDeals(response.data);
+      // TODO: Replace with actual API call
+      const mockDeals: Deal[] = [
+        {
+          id: '1',
+          title: 'Summer Fashion Campaign',
+          brand: { id: '1', name: 'StyleCorp' },
+          agency: { id: '1', name: 'Creative Agency' },
+          totalAmount: 5000,
+          paidAmount: 2000,
+          status: 'IN_PROGRESS',
+          deadline: '2024-03-15',
+          createdAt: '2024-02-01',
+          tags: ['Fashion', 'Summer', 'Lifestyle'],
+          milestones: [
+            {
+              id: '1',
+              title: 'Instagram Posts',
+              description: '3 high-quality Instagram posts',
+              amount: 2000,
+              deadline: '2024-02-20',
+              status: 'APPROVED',
+              feedback: 'Outstanding work! Perfect aesthetics.',
+              rating: 5,
+            },
+            {
+              id: '2',
+              title: 'TikTok Videos',
+              description: '2 engaging TikTok videos',
+              amount: 1500,
+              deadline: '2024-03-01',
+              status: 'IN_PROGRESS',
+            },
+            {
+              id: '3',
+              title: 'YouTube Shorts',
+              description: '1 YouTube Shorts video',
+              amount: 1500,
+              deadline: '2024-03-10',
+              status: 'PENDING',
+            },
+          ],
+        },
+        {
+          id: '2',
+          title: 'Tech Product Review',
+          brand: { id: '2', name: 'TechFlow' },
+          totalAmount: 3500,
+          paidAmount: 0,
+          status: 'PENDING',
+          deadline: '2024-03-25',
+          createdAt: '2024-02-25',
+          tags: ['Tech', 'Review', 'Innovation'],
+          milestones: [
+            {
+              id: '4',
+              title: 'Unboxing Video',
+              description: 'YouTube unboxing and first impressions',
+              amount: 2000,
+              deadline: '2024-03-10',
+              status: 'PENDING',
+            },
+            {
+              id: '5',
+              title: 'Social Media Posts',
+              description: '5 Instagram stories + 3 posts',
+              amount: 1500,
+              deadline: '2024-03-20',
+              status: 'PENDING',
+            },
+          ],
+        },
+        {
+          id: '3',
+          title: 'Fitness Equipment Campaign',
+          brand: { id: '3', name: 'FitLife' },
+          agency: { id: '2', name: 'Health Marketing Co' },
+          totalAmount: 4000,
+          paidAmount: 4000,
+          status: 'COMPLETED',
+          deadline: '2024-02-28',
+          createdAt: '2024-01-15',
+          tags: ['Fitness', 'Health', 'Wellness'],
+          milestones: [
+            {
+              id: '6',
+              title: 'Workout Videos',
+              description: '3 workout demonstration videos',
+              amount: 2500,
+              deadline: '2024-02-15',
+              status: 'APPROVED',
+              rating: 5,
+            },
+            {
+              id: '7',
+              title: 'Before/After Content',
+              description: 'Progress showcase content',
+              amount: 1500,
+              deadline: '2024-02-25',
+              status: 'APPROVED',
+              rating: 4,
+            },
+          ],
+        },
+      ];
+      
+      // Filter deals based on current filter
+      const filteredDeals = filter 
+        ? mockDeals.filter(deal => deal.status === filter)
+        : mockDeals;
+      
+      setDeals(filteredDeals);
     } catch (error) {
       console.error('Error loading deals:', error);
       Alert.alert('Error', 'Failed to load deals');
@@ -133,12 +279,9 @@ export default function DealsScreen() {
     router.push(`/deal/${dealId}`);
   };
 
-  const handleCreateDeal = () => {
-    if (user?.role === 'BRAND') {
-      router.push('/create-deal');
-    } else {
-      Alert.alert('Info', 'Only brands can create deals');
-    }
+  const handleBrowseOpportunities = () => {
+    // Navigate to opportunities screen or marketplace
+    Alert.alert('Browse Opportunities', 'This would navigate to the opportunities marketplace');
   };
 
   useEffect(() => {
@@ -174,9 +317,10 @@ export default function DealsScreen() {
       {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <FilterButton title="All" filterValue={null} isActive={filter === null} />
-        <FilterButton title="Pending" filterValue="DRAFT" isActive={filter === 'DRAFT'} />
-        <FilterButton title="Active" filterValue="FUNDED" isActive={filter === 'FUNDED'} />
-        <FilterButton title="Completed" filterValue="RELEASED" isActive={filter === 'RELEASED'} />
+        <FilterButton title="Pending" filterValue="PENDING" isActive={filter === 'PENDING'} />
+        <FilterButton title="Active" filterValue="IN_PROGRESS" isActive={filter === 'IN_PROGRESS'} />
+        <FilterButton title="Delivered" filterValue="DELIVERED" isActive={filter === 'DELIVERED'} />
+        <FilterButton title="Completed" filterValue="COMPLETED" isActive={filter === 'COMPLETED'} />
       </View>
 
       {/* Deals List */}
@@ -186,16 +330,14 @@ export default function DealsScreen() {
           <Text style={styles.emptyTitle}>No deals found</Text>
           <Text style={styles.emptySubtitle}>
             {filter 
-              ? `No ${filter.toLowerCase()} deals at the moment`
-              : 'Start by creating or accepting your first deal'
+              ? `No ${filter.toLowerCase().replace('_', ' ')} deals at the moment`
+              : 'Browse opportunities and apply to deals that match your skills'
             }
           </Text>
-          {user?.role === 'BRAND' && (
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateDeal}>
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.createButtonText}>Create Deal</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.createButton} onPress={handleBrowseOpportunities}>
+            <Ionicons name="search" size={20} color="#FFFFFF" />
+            <Text style={styles.createButtonText}>Browse Opportunities</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -219,10 +361,10 @@ export default function DealsScreen() {
         />
       )}
 
-      {/* Floating Action Button for Brands */}
-      {user?.role === 'BRAND' && deals.length > 0 && (
-        <TouchableOpacity style={styles.fab} onPress={handleCreateDeal}>
-          <Ionicons name="add" size={28} color="#FFFFFF" />
+      {/* Floating Action Button */}
+      {deals.length > 0 && (
+        <TouchableOpacity style={styles.fab} onPress={handleBrowseOpportunities}>
+          <Ionicons name="search" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
     </View>
@@ -313,19 +455,70 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginBottom: 12,
   },
+  progressContainer: {
+    marginVertical: 8,
+  },
+  progressBackground: {
+    height: 4,
+    backgroundColor: '#E5E5EA',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#007AFF',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 11,
+    color: '#8E8E93',
+    marginTop: 4,
+  },
   dealFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    marginTop: 8,
   },
   dealAmount: {
     fontSize: 18,
     fontWeight: '700',
     color: '#34C759',
   },
+  dealPaid: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  dealDates: {
+    alignItems: 'flex-end',
+  },
   dealDate: {
     fontSize: 12,
     color: '#8E8E93',
+    fontWeight: '600',
+  },
+  dealCreated: {
+    fontSize: 11,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 4,
+  },
+  tag: {
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagText: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '500',
   },
   emptyState: {
     flex: 1,

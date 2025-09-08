@@ -2,9 +2,9 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AgencyDashboard } from './AgencyDashboard';
 import { BrandDashboard } from './BrandDashboard';
+import { CreatorDashboard } from './CreatorDashboard';
 
 // Import other dashboard components when they exist
-// import { CreatorDashboard } from './CreatorDashboard';
 // import { AdminDashboard } from './AdminDashboard';
 
 interface DashboardRouterProps {
@@ -32,61 +32,7 @@ export function DashboardRouter(props: DashboardRouterProps) {
       return <AgencyDashboard {...props} />;
     
     case 'CREATOR':
-      // For now, show a placeholder - replace with actual CreatorDashboard when ready
-      return (
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Creator Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back! Manage your content deals and track your earnings.
-            </p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Active Deals</h3>
-              </div>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">No active deals</p>
-            </div>
-            
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Pending Deliverables</h3>
-              </div>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">All caught up!</p>
-            </div>
-            
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Total Earnings</h3>
-              </div>
-              <div className="text-2xl font-bold">$0.00</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </div>
-            
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Completion Rate</h3>
-              </div>
-              <div className="text-2xl font-bold">0%</div>
-              <p className="text-xs text-muted-foreground">No deals yet</p>
-            </div>
-          </div>
-
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4">Getting Started</h3>
-            <div className="space-y-2 text-sm">
-              <p>• Complete your profile and KYC verification</p>
-              <p>• Set up your payment methods</p>
-              <p>• Browse available deals from brands</p>
-              <p>• Submit high-quality deliverables on time</p>
-            </div>
-          </div>
-        </div>
-      );
+      return <CreatorDashboard {...props} />;
     
     case 'BRAND':
       return <BrandDashboard {...props} />;
