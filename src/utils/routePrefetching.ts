@@ -31,7 +31,7 @@ export async function prefetchRoute(path: string): Promise<void> {
         await import(/* webpackChunkName: "payouts" */ '@/pages/Payouts');
         break;
       case '/projects':
-        await import(/* webpackChunkName: "projects" */ '@/pages/Projects');
+        await import(/* webpackChunkName: "brand-projects" */ '@/pages/brand/Projects');
         break;
       case '/creators':
         await import(/* webpackChunkName: "creators" */ '@/pages/Creators');

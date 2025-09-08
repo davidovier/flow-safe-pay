@@ -94,7 +94,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         forceNew: true,
         reconnection: true,
         reconnectionAttempts: maxReconnectAttempts,
-        reconnectionDelay,
+        reconnectionDelay: 5000,
       });
 
       socketRef.current = socket;

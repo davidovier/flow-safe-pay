@@ -111,9 +111,8 @@ export function MilestoneSubmissionForm({ milestone, onSuccess, onCancel }: Mile
     const { error: uploadError } = await supabase.storage
       .from('deliverables')
       .upload(filePath, file, {
-        onUploadProgress: (progress) => {
-          setUploadProgress((progress.loaded / progress.total) * 100);
-        },
+        // onUploadProgress not supported in current Supabase version
+        upsert: false
       });
 
     if (uploadError) {

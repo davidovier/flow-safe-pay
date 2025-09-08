@@ -231,6 +231,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          currency: string
           deal_id: string
           due_at: string | null
           id: string
@@ -241,6 +242,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          currency?: string
           deal_id: string
           due_at?: string | null
           id?: string
@@ -251,6 +253,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          currency?: string
           deal_id?: string
           due_at?: string | null
           id?: string
@@ -267,6 +270,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read_at?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          brand: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          last4: string
+          stripe_payment_method_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last4: string
+          stripe_payment_method_id?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last4?: string
+          stripe_payment_method_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payouts: {
         Row: {
@@ -414,7 +489,7 @@ export type Database = {
         | "RELEASED"
         | "DISPUTED"
       payment_provider: "STRIPE" | "MANGOPAY" | "CRYPTO"
-      user_role: "CREATOR" | "BRAND" | "ADMIN"
+      user_role: "CREATOR" | "BRAND" | "ADMIN" | "AGENCY"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -553,7 +628,7 @@ export const Constants = {
         "DISPUTED",
       ],
       payment_provider: ["STRIPE", "MANGOPAY", "CRYPTO"],
-      user_role: ["CREATOR", "BRAND", "ADMIN"],
+      user_role: ["CREATOR", "BRAND", "ADMIN", "AGENCY"],
     },
   },
 } as const

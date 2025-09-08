@@ -155,8 +155,8 @@ export function FileManagementPanel() {
       const sizeByType: Record<string, { count: number; size: number }> = {};
 
       data.forEach(file => {
-        const fileSize = file.checks?.file_size || 0;
-        const fileType = file.checks?.file_type?.split('/')[0] || 'other';
+        const fileSize = (file.checks as any)?.file_size || 0;
+        const fileType = (file.checks as any)?.file_type?.split('/')[0] || 'other';
         
         totalSize += fileSize;
         

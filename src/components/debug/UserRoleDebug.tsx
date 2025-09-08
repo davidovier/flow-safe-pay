@@ -13,7 +13,7 @@ export function UserRoleDebug() {
     if (user) {
       // Get the raw user data from auth.users
       const { data } = await supabase.auth.getUser();
-      setAuthMetadata(data.user?.user_metadata || data.user?.raw_user_meta_data);
+      setAuthMetadata(data.user?.user_metadata);
     }
   };
 
