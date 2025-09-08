@@ -20,6 +20,8 @@ import { uploadRoutes } from './routes/uploads.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { disputeRoutes } from './routes/disputes.js';
 import { invoiceRoutes } from './routes/invoices.js';
+import { agencyRoutes } from './routes/agencies.js';
+import { subscriptionRoutes } from './routes/subscriptions.js';
 import { WebSocketServer } from './services/websocket/WebSocketServer.js';
 
 const prisma = new PrismaClient();
@@ -151,6 +153,8 @@ async function startServer() {
     await fastify.register(notificationRoutes, { prefix: '/notifications' });
     await fastify.register(disputeRoutes, { prefix: '/disputes' });
     await fastify.register(invoiceRoutes, { prefix: '/invoices' });
+    await fastify.register(agencyRoutes, { prefix: '/agencies' });
+    await fastify.register(subscriptionRoutes, { prefix: '/subscriptions' });
 
     // Error handler
     fastify.setErrorHandler((error, request, reply) => {

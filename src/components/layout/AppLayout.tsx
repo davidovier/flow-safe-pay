@@ -12,7 +12,10 @@ import {
   CreditCard, 
   Settings, 
   LogOut,
-  Users
+  Users,
+  Building2,
+  Crown,
+  BarChart3
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -46,6 +49,17 @@ export function AppLayout({ children }: AppLayoutProps) {
         { icon: Handshake, label: 'My Deals', path: '/deals' },
         { icon: Upload, label: 'Deliverables', path: '/deliverables' },
         { icon: CreditCard, label: 'Payouts', path: '/payouts' },
+      ];
+    }
+
+    if (userProfile.role === 'AGENCY') {
+      return [
+        ...baseItems,
+        { icon: Users, label: 'Creators', path: '/agency/creators' },
+        { icon: Handshake, label: 'Deals', path: '/agency/deals' },
+        { icon: BarChart3, label: 'Analytics', path: '/agency/analytics' },
+        { icon: Crown, label: 'Subscription', path: '/agency/subscription' },
+        { icon: Building2, label: 'Agency Settings', path: '/agency/settings' },
       ];
     }
 

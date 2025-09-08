@@ -1,7 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  
   return (
     <Tabs
       screenOptions={{
@@ -71,6 +74,18 @@ export default function TabLayout() {
           headerTitle: 'Payouts',
         }}
       />
+      {user?.role === 'AGENCY' && (
+        <Tabs.Screen
+          name="agency"
+          options={{
+            title: 'Agency',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="business" size={size} color={color} />
+            ),
+            headerTitle: 'Agency Dashboard',
+          }}
+        />
+      )}
       <Tabs.Screen
         name="profile"
         options={{

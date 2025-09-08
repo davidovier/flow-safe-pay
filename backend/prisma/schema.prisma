@@ -11,6 +11,7 @@ datasource db {
 enum UserRole {
   CREATOR
   BRAND
+  AGENCY
   ADMIN
 }
 
@@ -78,6 +79,26 @@ enum PayoutStatus {
   CANCELED
 }
 
+enum AgencyTier {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum AgencyMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
+}
+
 enum InvoiceStatus {
   GENERATED
   SENT
@@ -100,20 +121,30 @@ model User {
   deletedAt               DateTime? @map("deleted_at")
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
+  
+  // Agency relationship fields
+  managingAgencyId        String?   @map("managing_agency_id") // For creators managed by agency
+  isAgencyManaged         Boolean   @default(false) @map("is_agency_managed")
 
   // Relationships
-  brandProjects     Project[]           @relation("BrandProjects")
-  creatorDeals      Deal[]              @relation("CreatorDeals")
-  raisedDisputes    Dispute[]           @relation("DisputeRaiser")
-  disputeResponses  DisputeResponse[]   @relation("DisputeResponses")
-  disputeResolutions DisputeResolution[] @relation("DisputeResolutions")
-  events            Event[]             @relation("UserEvents")
-  refreshTokens     RefreshToken[]      @relation("UserRefreshTokens")
+  brandProjects       Project[]           @relation("BrandProjects")
+  creatorDeals        Deal[]              @relation("CreatorDeals")
+  raisedDisputes      Dispute[]           @relation("DisputeRaiser")
+  disputeResponses    DisputeResponse[]   @relation("DisputeResponses")
+  disputeResolutions  DisputeResolution[] @relation("DisputeResolutions")
+  events              Event[]             @relation("UserEvents")
+  refreshTokens       RefreshToken[]      @relation("UserRefreshTokens")
+  
+  // Agency relationships
+  ownedAgency         Agency?             @relation("AgencyOwner")
+  agencyMemberships   AgencyMembership[]  @relation("AgencyMembers")
+  managingAgency      Agency?             @relation("ManagedCreators", fields: [managingAgencyId], references: [id])
 
   @@map("users")
   @@index([email])
   @@index([kycStatus])
   @@index([deletedAt])
+  @@index([managingAgencyId])
 }
 
 model Project {
@@ -136,8 +167,10 @@ model Deal {
   id           String    @id @default(cuid())
   projectId    String    @map("project_id")
   creatorId    String    @map("creator_id")
+  managingAgencyId String? @map("managing_agency_id") // Agency managing this deal
   currency     String    @default("usd")
   amountTotal  Int       @map("amount_total") // Amount in cents
+  agencyFeeRate Decimal? @db.Decimal(5,2) // Agency fee percentage if managed
   escrowId     String?   @map("escrow_id") // Provider-specific escrow ID
   state        DealState @default(DRAFT)
   acceptedAt   DateTime? @map("accepted_at")
@@ -157,6 +190,7 @@ model Deal {
   events       Event[]
 
   @@map("deals")
+  @@index([managingAgencyId])
 }
 
 model Milestone {
@@ -368,6 +402,100 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@index([tokenHash])
+}
+
+// Agency Management Models
+model Agency {
+  id                      String              @id @default(cuid())
+  name                    String
+  ownerId                 String              @unique @map("owner_id")
+  tier                    AgencyTier          @default(STARTER)
+  maxCreators             Int                 @default(5)
+  platformFeeRate         Decimal             @default(5.0) @db.Decimal(5,2) // Percentage
+  isActive                Boolean             @default(true) @map("is_active")
+  companyInfo             Json?               @map("company_info") // Company details, address, etc.
+  branding                Json?               // Logo, colors, white-label settings
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
+
+  // Relationships
+  owner                   User                @relation("AgencyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships             AgencyMembership[]  @relation("AgencyMemberships")
+  managedCreators         User[]              @relation("ManagedCreators")
+  subscription            AgencySubscription?
+  invitations             AgencyInvitation[]  @relation("AgencyInvitations")
+  
+  @@map("agencies")
+  @@index([ownerId])
+  @@index([tier])
+  @@index([isActive])
+}
+
+model AgencyMembership {
+  id          String           @id @default(cuid())
+  agencyId    String           @map("agency_id")
+  userId      String           @map("user_id")
+  role        AgencyMemberRole @default(MEMBER)
+  invitedAt   DateTime         @default(now()) @map("invited_at")
+  acceptedAt  DateTime?        @map("accepted_at")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relationships
+  agency      Agency          @relation("AgencyMemberships", fields: [agencyId], references: [id], onDelete: Cascade)
+  user        User            @relation("AgencyMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("agency_memberships")
+  @@unique([agencyId, userId])
+  @@index([agencyId])
+  @@index([userId])
+}
+
+model AgencyInvitation {
+  id          String    @id @default(cuid())
+  agencyId    String    @map("agency_id")
+  email       String
+  role        AgencyMemberRole @default(MEMBER)
+  inviteToken String    @unique @map("invite_token")
+  expiresAt   DateTime  @map("expires_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  agency      Agency    @relation("AgencyInvitations", fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("agency_invitations")
+  @@index([agencyId])
+  @@index([inviteToken])
+  @@index([expiresAt])
+}
+
+model AgencySubscription {
+  id                  String             @id @default(cuid())
+  agencyId            String             @unique @map("agency_id")
+  tier                AgencyTier
+  status              SubscriptionStatus @default(TRIALING)
+  basePrice           Decimal            @db.Decimal(10,2) // Monthly base price
+  perCreatorPrice     Decimal            @db.Decimal(10,2) // Price per creator
+  platformFeeRate     Decimal            @db.Decimal(5,2)  // Agency's platform fee rate
+  billingCycle        String             @default("monthly") // monthly, yearly
+  trialEndsAt         DateTime?          @map("trial_ends_at")
+  currentPeriodStart  DateTime           @map("current_period_start")
+  currentPeriodEnd    DateTime           @map("current_period_end")
+  stripeSubscriptionId String?           @map("stripe_subscription_id")
+  stripePriceId       String?            @map("stripe_price_id")
+  canceledAt          DateTime?          @map("canceled_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  // Relationships
+  agency              Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("agency_subscriptions")
+  @@index([agencyId])
+  @@index([status])
+  @@index([currentPeriodEnd])
 }
 
 // Global indexes removed - they should be defined within model blocks

@@ -174,6 +174,7 @@ export default function ProfileScreen() {
     switch (role) {
       case 'CREATOR': return '#32D74B';
       case 'BRAND': return '#007AFF';
+      case 'AGENCY': return '#8B5CF6';
       case 'ADMIN': return '#FF9500';
       default: return '#8E8E93';
     }
@@ -277,6 +278,28 @@ export default function ProfileScreen() {
           subtitle="Update your tax and billing details"
           onPress={() => router.push('/profile/tax-info')}
         />
+        {profile.role === 'AGENCY' && (
+          <>
+            <ProfileItem
+              icon="business"
+              title="Agency Settings"
+              subtitle="Manage your agency configuration"
+              onPress={() => router.push('/profile/agency-settings')}
+            />
+            <ProfileItem
+              icon="people"
+              title="Creator Management"
+              subtitle="View and manage your creators"
+              onPress={() => router.push('/agency/creators')}
+            />
+            <ProfileItem
+              icon="star"
+              title="Subscription"
+              subtitle="Manage your agency subscription"
+              onPress={() => router.push('/profile/subscription')}
+            />
+          </>
+        )}
       </ProfileSection>
 
       {/* Notification Preferences */}

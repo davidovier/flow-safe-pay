@@ -244,8 +244,14 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
         </CardTitle>
         <CardDescription className="text-gray-600">
           {mode === 'signin' 
-            ? 'Sign in to access your secure creator workspace'
-            : 'Start earning with instant, secure payments'
+            ? 'Sign in to access your secure workspace'
+            : role === 'CREATOR' 
+            ? 'Start earning with instant, secure payments'
+            : role === 'BRAND'
+            ? 'Find and collaborate with top creators'
+            : role === 'AGENCY'
+            ? 'Scale your creator management business'
+            : 'Join the future of creator economy'
           }
         </CardDescription>
       </CardHeader>
@@ -340,6 +346,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
                   <SelectContent>
                     <SelectItem value="CREATOR">🎨 Creator - I create content and earn</SelectItem>
                     <SelectItem value="BRAND">🏢 Brand - I hire creators for campaigns</SelectItem>
+                    <SelectItem value="AGENCY">🏛️ Agency - I manage multiple creators</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

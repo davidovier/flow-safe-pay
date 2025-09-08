@@ -7,7 +7,7 @@ import { RefreshTokenService } from '../services/auth/RefreshTokenService.js';
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(['CREATOR', 'BRAND']),
+  role: z.enum(['CREATOR', 'BRAND', 'AGENCY']),
   country: z.string().optional(),
 });
 
@@ -33,7 +33,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         properties: {
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 8 },
-          role: { type: 'string', enum: ['CREATOR', 'BRAND'] },
+          role: { type: 'string', enum: ['CREATOR', 'BRAND', 'AGENCY'] },
           country: { type: 'string' },
         },
       },
@@ -353,6 +353,8 @@ export async function authRoutes(fastify: FastifyInstance) {
           stripeAccountId: true,
           createdAt: true,
           deletedAt: true,
+          isAgencyManaged: true,
+          managingAgencyId: true,
         },
       });
 

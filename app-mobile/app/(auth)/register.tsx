@@ -32,7 +32,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'CREATOR' | 'BRAND'>('CREATOR');
+  const [role, setRole] = useState<'CREATOR' | 'BRAND' | 'AGENCY'>('CREATOR');
   const [country, setCountry] = useState('US');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -105,54 +105,83 @@ export default function RegisterScreen() {
             {/* Role Selection */}
             <View className="mb-6">
               <Text className="text-gray-700 font-medium mb-3">I am a...</Text>
-              <View className="flex-row space-x-4">
-                <TouchableOpacity
-                  onPress={() => setRole('CREATOR')}
-                  className={`flex-1 p-4 rounded-xl border-2 ${
-                    role === 'CREATOR'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 bg-white'
-                  }`}
-                  disabled={loading}
-                >
-                  <Text
-                    className={`text-center font-semibold ${
-                      role === 'CREATOR' ? 'text-blue-700' : 'text-gray-700'
+              <View className="space-y-3">
+                {/* First row - Creator and Brand */}
+                <View className="flex-row space-x-4">
+                  <TouchableOpacity
+                    onPress={() => setRole('CREATOR')}
+                    className={`flex-1 p-4 rounded-xl border-2 ${
+                      role === 'CREATOR'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white'
                     }`}
+                    disabled={loading}
                   >
-                    🎨 Creator
-                  </Text>
-                  <Text
-                    className={`text-center text-sm mt-1 ${
-                      role === 'CREATOR' ? 'text-blue-600' : 'text-gray-500'
-                    }`}
-                  >
-                    Content creator
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      className={`text-center font-semibold ${
+                        role === 'CREATOR' ? 'text-blue-700' : 'text-gray-700'
+                      }`}
+                    >
+                      🎨 Creator
+                    </Text>
+                    <Text
+                      className={`text-center text-sm mt-1 ${
+                        role === 'CREATOR' ? 'text-blue-600' : 'text-gray-500'
+                      }`}
+                    >
+                      Content creator
+                    </Text>
+                  </TouchableOpacity>
 
+                  <TouchableOpacity
+                    onPress={() => setRole('BRAND')}
+                    className={`flex-1 p-4 rounded-xl border-2 ${
+                      role === 'BRAND'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                    disabled={loading}
+                  >
+                    <Text
+                      className={`text-center font-semibold ${
+                        role === 'BRAND' ? 'text-blue-700' : 'text-gray-700'
+                      }`}
+                    >
+                      🏢 Brand
+                    </Text>
+                    <Text
+                      className={`text-center text-sm mt-1 ${
+                        role === 'BRAND' ? 'text-blue-600' : 'text-gray-500'
+                      }`}
+                    >
+                      Business owner
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Second row - Agency */}
                 <TouchableOpacity
-                  onPress={() => setRole('BRAND')}
-                  className={`flex-1 p-4 rounded-xl border-2 ${
-                    role === 'BRAND'
-                      ? 'border-blue-500 bg-blue-50'
+                  onPress={() => setRole('AGENCY')}
+                  className={`p-4 rounded-xl border-2 ${
+                    role === 'AGENCY'
+                      ? 'border-purple-500 bg-purple-50'
                       : 'border-gray-200 bg-white'
                   }`}
                   disabled={loading}
                 >
                   <Text
                     className={`text-center font-semibold ${
-                      role === 'BRAND' ? 'text-blue-700' : 'text-gray-700'
+                      role === 'AGENCY' ? 'text-purple-700' : 'text-gray-700'
                     }`}
                   >
-                    🏢 Brand
+                    🏛️ Agency
                   </Text>
                   <Text
                     className={`text-center text-sm mt-1 ${
-                      role === 'BRAND' ? 'text-blue-600' : 'text-gray-500'
+                      role === 'AGENCY' ? 'text-purple-600' : 'text-gray-500'
                     }`}
                   >
-                    Business owner
+                    Manage multiple creators
                   </Text>
                 </TouchableOpacity>
               </View>
