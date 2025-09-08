@@ -1,5 +1,5 @@
 // OPTIMIZATION: Hook for route prefetching integration
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { prefetchUserRoutes, prefetchOnHover } from '@/utils/routePrefetching';
 
