@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { NotificationService } from '../services/websocket/NotificationService.js';
-import { getWebSocketServer } from '../server.js';
+import { getWebSocketServer } from '../index.js';
 
 const getNotificationsSchema = z.object({
   limit: z.number().min(1).max(100).optional().default(50),

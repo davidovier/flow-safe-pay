@@ -43,6 +43,7 @@
     "@fastify/swagger": "^8.14.0",
     "@fastify/swagger-ui": "^2.1.0",
     "@prisma/client": "^5.7.1",
+    "@types/socket.io": "^3.0.1",
     "bcryptjs": "^2.4.3",
     "bullmq": "^4.15.4",
     "fastify": "^4.24.3",
@@ -50,6 +51,7 @@
     "jspdf": "^2.5.1",
     "nanoid": "^5.0.4",
     "pdfkit": "^0.14.0",
+    "socket.io": "^4.8.1",
     "stripe": "^14.10.0",
     "zod": "^3.22.4"
   },

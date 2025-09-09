@@ -16,7 +16,7 @@ const DEFAULT_TITLE = 'FlowPay - Secure Escrow Platform for Creators and Brands'
 const DEFAULT_DESCRIPTION = 'Get paid instantly for your creator work. Secure escrow platform that protects both creators and brands. Funds release automatically when work is approved - no more payment delays.'
 const DEFAULT_KEYWORDS = ['creator payments', 'escrow platform', 'instant payouts', 'brand partnerships']
 
-export default function SEOHead({
+function SEOHead({
   title,
   description = DEFAULT_DESCRIPTION,
   keywords = DEFAULT_KEYWORDS,
@@ -58,3 +58,6 @@ export default function SEOHead({
     </Helmet>
   )
 }
+
+export { SEOHead };
+export default SEOHead;

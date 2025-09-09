@@ -479,3 +479,10 @@ export function initXSSProtection(): void {
     console.warn('XSS Protection: Be careful with dynamic script execution');
   }
 }
+
+// Additional exports for test compatibility
+export const sanitizeHtml = sanitizeInput;
+export const encodeHtmlEntities = escapeHtml;
+export const sanitizeObject = autoSanitizeObject;
+export const isDangerous = (input: string) => detectXSS(input).detected;
+export const validateUrl = (url: string) => sanitizeUrl(url) !== '';

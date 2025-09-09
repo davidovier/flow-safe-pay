@@ -1,4 +1,4 @@
-import { getCLS, getFID, getFCP, getLCP, getTTFB, Metric } from 'web-vitals'
+import { onCLS, onFCP, onLCP, onTTFB, Metric } from 'web-vitals'
 
 export interface PerformanceMetric {
   name: string
@@ -14,7 +14,6 @@ export interface PerformanceMetric {
 // Thresholds based on Core Web Vitals recommendations
 const THRESHOLDS = {
   CLS: { good: 0.1, poor: 0.25 },
-  FID: { good: 100, poor: 300 },
   FCP: { good: 1800, poor: 3000 },
   LCP: { good: 2500, poor: 4000 },
   TTFB: { good: 800, poor: 1800 },
@@ -92,11 +91,10 @@ export function initWebVitals() {
   if (typeof window === 'undefined') return
   
   // Track Core Web Vitals
-  getCLS((metric) => sendToAnalytics(createMetric(metric)))
-  getFID((metric) => sendToAnalytics(createMetric(metric)))
-  getFCP((metric) => sendToAnalytics(createMetric(metric)))
-  getLCP((metric) => sendToAnalytics(createMetric(metric)))
-  getTTFB((metric) => sendToAnalytics(createMetric(metric)))
+  onCLS((metric) => sendToAnalytics(createMetric(metric)))
+  onFCP((metric) => sendToAnalytics(createMetric(metric)))
+  onLCP((metric) => sendToAnalytics(createMetric(metric)))
+  onTTFB((metric) => sendToAnalytics(createMetric(metric)))
 }
 
 // Custom performance tracking
