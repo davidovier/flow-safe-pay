@@ -39,15 +39,23 @@ vi.mock('@/hooks/use-toast', () => ({
 }))
 
 // Mock i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: {
-      changeLanguage: vi.fn(),
-      language: 'en',
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => key,
+      i18n: {
+        changeLanguage: vi.fn(),
+        language: 'en',
+      },
+    }),
+    initReactI18next: {
+      type: '3rdParty',
+      init: vi.fn(),
     },
-  }),
-}))
+  }
+})
 
 // Mock IntersectionObserver
 Object.defineProperty(window, 'IntersectionObserver', {
