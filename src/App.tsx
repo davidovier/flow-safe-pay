@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { HelmetProvider } from 'react-helmet-async';
 import '@/lib/i18n';
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { useEffect, Suspense, lazy } from "react";
@@ -13,6 +14,7 @@ import { initXSSProtection } from "@/utils/security/xssProtection";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useRoutePrefetching } from "@/hooks/useRoutePrefetching";
 import { Skeleton } from "@/components/ui/skeleton";
+import ErrorBoundary from "@/components/error/ErrorBoundary";
 // OPTIMIZATION: Eager load critical pages, lazy load others
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
@@ -230,19 +232,23 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <SubscriptionProvider>
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
-          </SubscriptionProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AuthProvider>
+              <SubscriptionProvider>
+                <BrowserRouter>
+                  <AppContent />
+                </BrowserRouter>
+              </SubscriptionProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 };
 

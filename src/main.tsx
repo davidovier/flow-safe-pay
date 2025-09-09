@@ -1,7 +1,10 @@
 import { createRoot } from 'react-dom/client'
+import { Analytics } from '@vercel/analytics/react'
 import App from './App.tsx'
 import './index.css'
-import { applySecurityHeaders } from './utils/security/securityHeaders';
+import './lib/i18n'
+import { applySecurityHeaders } from './utils/security/securityHeaders'
+import { initWebVitals, initPerformanceObserver } from './utils/monitoring/webVitals'
 
 // Apply security headers for enhanced protection (disabled in development for preview compatibility)
 try {
@@ -14,4 +17,13 @@ try {
   }
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Initialize performance monitoring
+initWebVitals();
+initPerformanceObserver();
+
+createRoot(document.getElementById("root")!).render(
+  <>
+    <App />
+    <Analytics />
+  </>
+);

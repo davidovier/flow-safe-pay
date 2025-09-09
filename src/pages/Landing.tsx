@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import SEOHead from '@/components/seo/SEOHead';
 import { 
   Shield, 
   Zap, 
@@ -122,6 +123,30 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Secure Creator Payments & Brand Partnerships"
+        description="FlowPay is the secure escrow platform for creators and brands. Get paid instantly when work is approved. No more payment delays, with bank-grade security and automatic release."
+        keywords={['creator payments', 'escrow platform', 'instant payouts', 'brand partnerships', 'secure payments', 'creator economy', 'influencer payments', 'payment protection']}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "FlowPay",
+          "url": "https://flowpay.com",
+          "description": "Secure escrow platform for creator payments and brand partnerships",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "ratingCount": "2500"
+          }
+        }}
+      />
       {/* Navigation */}
       <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
