@@ -110,7 +110,7 @@ export default function Landing() {
   ];
 
   const trustedBy = [
-    "TechCrunch", "Forbes", "Shopify", "Creator Economy Report", "Social Media Examiner", "ConvertKit"
+    "Stripe Connect Partner", "SOC 2 Compliant", "GDPR Compliant", "PCI DSS Level 1", "Bank-Grade Security", "15,000+ Users"
   ];
 
   const securityCertifications = [
@@ -183,26 +183,42 @@ export default function Landing() {
               {t('trustedBy')}
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-              {t('heroTitle')}
-              <span className="text-primary"> {t('heroTitleHighlight')}</span>
+              Get Paid Instantly for Your
+              <span className="text-primary"> Creator Work</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              {t('heroDescription')}
+              Secure escrow platform that protects both creators and brands. Funds release automatically when work is approved - no more payment delays or broken promises.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <Button size="lg" className="text-lg px-8" onClick={() => navigate('/auth')}>
-                {t('startCreatingDeals')}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              <Button size="lg" className="text-lg px-8 py-4" onClick={() => navigate('/auth')}>
+                Get Started - It's Free
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="text-lg"
+                className="text-lg px-6 py-4"
                 onClick={handleDemoClick}
               >
                 <Play className="mr-2 h-5 w-5" />
-                {t('watchDemo')}
+                See How It Works
               </Button>
+            </div>
+            
+            {/* Role-specific value props */}
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Users className="h-4 w-4 text-blue-600" />
+                </div>
+                <span><strong>Creators:</strong> Get paid instantly when work is approved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-green-600" />
+                </div>
+                <span><strong>Brands:</strong> Your money is protected until you're satisfied</span>
+              </div>
             </div>
           </div>
 
@@ -221,10 +237,13 @@ export default function Landing() {
       {/* Trusted By */}
       <section className="py-12 border-y bg-muted/20">
         <div className="container mx-auto px-4">
-          <p className="text-center text-muted-foreground mb-8">Featured in</p>
-          <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-            {trustedBy.map((company, index) => (
-              <div key={index} className="text-lg font-semibold">{company}</div>
+          <p className="text-center text-muted-foreground mb-8">Trusted & Secure</p>
+          <div className="flex flex-wrap justify-center items-center gap-8 opacity-70">
+            {trustedBy.map((certification, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm font-medium">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                {certification}
+              </div>
             ))}
           </div>
         </div>
@@ -235,10 +254,10 @@ export default function Landing() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {t('featuresTitle')}
+              Why Creators & Brands Choose FlowPay
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              {t('featuresDescription')}
+              Built specifically for the creator economy with features that protect everyone involved
             </p>
           </div>
           
@@ -249,8 +268,18 @@ export default function Landing() {
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                     <feature.icon className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="font-semibold mb-2">{t(feature.titleKey)}</h3>
-                  <p className="text-sm text-muted-foreground">{t(feature.descriptionKey)}</p>
+                  <h3 className="font-semibold mb-2">
+                    {feature.titleKey === 'secureEscrow' && 'Secure Escrow'}
+                    {feature.titleKey === 'instantPayouts' && 'Instant Payouts'}
+                    {feature.titleKey === 'stripeProtected' && 'Stripe Protected'}
+                    {feature.titleKey === 'autoRelease' && 'Auto-Release'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {feature.titleKey === 'secureEscrow' && 'Your funds are protected with bank-grade security until deliverables are approved.'}
+                    {feature.titleKey === 'instantPayouts' && 'Creators get paid immediately upon approval - no more waiting 30 days for payment.'}
+                    {feature.titleKey === 'stripeProtected' && 'All payments processed through Stripe with buyer and seller protection.'}
+                    {feature.titleKey === 'autoRelease' && 'Payments automatically release if no response within the agreed timeframe.'}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -262,31 +291,31 @@ export default function Landing() {
       <section className="py-20 px-4 bg-muted/20">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('howItWorksTitle')}</h2>
-            <p className="text-xl text-muted-foreground">{t('howItWorksDescription')}</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How FlowPay Works</h2>
+            <p className="text-xl text-muted-foreground">Simple, secure, and transparent for everyone</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground font-bold text-xl">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-primary rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl shadow-lg">
                 1
               </div>
-              <h3 className="font-semibold mb-2">{t('step1Title')}</h3>
-              <p className="text-muted-foreground">{t('step1Description')}</p>
+              <h3 className="font-semibold mb-3 text-lg">Create Partnership</h3>
+              <p className="text-muted-foreground leading-relaxed">Brand creates a project with clear milestones and payment terms. Creator reviews and accepts the partnership.</p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground font-bold text-xl">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl shadow-lg">
                 2
               </div>
-              <h3 className="font-semibold mb-2">{t('step2Title')}</h3>
-              <p className="text-muted-foreground">{t('step2Description')}</p>
+              <h3 className="font-semibold mb-3 text-lg">Secure Funding</h3>
+              <p className="text-muted-foreground leading-relaxed">Brand funds the project safely through Stripe. Money is held in secure escrow until work is delivered and approved.</p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground font-bold text-xl">
+              <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl shadow-lg">
                 3
               </div>
-              <h3 className="font-semibold mb-2">{t('step3Title')}</h3>
-              <p className="text-muted-foreground">{t('step3Description')}</p>
+              <h3 className="font-semibold mb-3 text-lg">Instant Payment</h3>
+              <p className="text-muted-foreground leading-relaxed">Creator delivers work and gets paid instantly upon approval. If no response within agreed time, payment releases automatically.</p>
             </div>
           </div>
         </div>
@@ -373,30 +402,52 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Money Back Guarantee */}
-      <section className="py-16 px-4">
+      {/* Final Call-to-Action */}
+      <section className="py-20 px-4 bg-gradient-to-r from-primary/10 via-blue-50 to-primary/10">
         <div className="container mx-auto text-center">
-          <div className="max-w-2xl mx-auto">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="h-8 w-8 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold mb-4">100% Money-Back Guarantee</h2>
-            <p className="text-muted-foreground mb-6">
-              If you're not completely satisfied with FlowPay within your first 30 days, 
-              we'll refund every penny. No questions asked.
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to Get Paid Instantly?
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8">
+              Join thousands of creators and brands who trust FlowPay for secure, instant payments
             </p>
-            <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>30-day guarantee</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>No questions asked</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Full refund</span>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              <Button size="lg" className="text-lg px-10 py-4 shadow-lg" onClick={() => navigate('/auth')}>
+                Start Free Today
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="text-lg px-8 py-4"
+                onClick={handleDemoClick}
+              >
+                <Play className="mr-2 h-5 w-5" />
+                Watch Demo
+              </Button>
+            </div>
+            
+            {/* Trust badges */}
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                No setup fees • No monthly fees • Only pay when you get paid
+              </p>
+              <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Shield className="h-4 w-4 text-green-500" />
+                  <span>30-day money-back guarantee</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Bank-grade security</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                  <span>4.9/5 rating</span>
+                </div>
               </div>
             </div>
           </div>
